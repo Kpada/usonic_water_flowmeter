@@ -141,12 +141,7 @@ BOOL DpInit (void)
 ///
 void DpProcess (void)
 {
-    static WORD getTempCnt = 0;
-    DpGetTof();
-    if( ++getTempCnt >= 5 ) {
-        DpGetTemerature();  
-        getTempCnt = 0;
-    }        
+     
 }
 //---------------------------------------------------------------------------
 

@@ -129,7 +129,7 @@ int main (void)
     while( 1 ) {
      //   clockCorrFactor = Gp22GetClkCorrectionFactor() * 8000000UL * 1000UL;
         // get data
-        DpProcess();
+        //DpProcess();
         appData = DpGetCurDataPoint();
         // btn
         handleButton();
