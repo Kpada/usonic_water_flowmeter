@@ -9,6 +9,8 @@ BYTE SpiGetByte (void);
 
 WORD SpiGetWord (BYTE addr);
 
+void SpiPutWord (BYTE addr, BYTE data);
+
 void SpiPutDword (BYTE addr, DWORD data);
 
 DWORD SpiGetDword (BYTE addr);

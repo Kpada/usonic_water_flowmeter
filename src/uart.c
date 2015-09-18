@@ -3,7 +3,7 @@
 
 // ua
 
-#define TX_BUFF_SIZE        128
+#define TX_BUFF_SIZE        256
 #define RX_BUFF_SIZE        128
 
 static __inline void uartInitPort (void);
@@ -13,7 +13,7 @@ static volatile BYTE        rxBuff [RX_BUFF_SIZE];
 
 RingBuff					uartTxQueue;
 RingBuff					uartRxQueue;
-const WORD rxTimeout =             3;
+const WORD rxTimeout =      3;
 
 WORD statusReg;
 
@@ -76,7 +76,6 @@ void USART1_IRQHandler(void) __irq
 {
     
     BYTE dummy = 0;
-	//DEF_PORT_STRUCT_VAR(uartPortStruct, &ports[uart1]);
     
     statusReg = USART1->SR;
     // new data byte is avalible
@@ -164,7 +163,6 @@ static __inline void uartInitPort (void)
     GPIO_InitTypeDef GPIO_InitStructure;  
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 
-    //заполняем поля структуры 
     // PB6 -> TX UART.
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
@@ -176,11 +174,9 @@ static __inline void uartInitPort (void)
     //PB7  -> RX UART. 
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
-    
-    GPIO_Init(GPIOB, &GPIO_InitStructure);//инициализируем
-    
-         
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;  
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+            
     // set AF
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1); //PD5 to TX 
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1); //PD6 to RX 

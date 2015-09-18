@@ -3,8 +3,8 @@
 
 /*********************** SPI *************************/
 
-#define NSS_HIGH        GPIOC->ODR |=    0x01 << 9
-#define NSS_LOW         GPIOC->ODR &= ~( 0x01 << 9 )
+#define NSS_HIGH        GPIOA->ODR |=    0x01 << 4
+#define NSS_LOW         GPIOA->ODR &= ~( 0x01 << 4 )
 
 void SpiInit (void)
 {
@@ -34,14 +34,14 @@ void SpiInit (void)
 	spiStruct.SPI_CPOL = SPI_CPOL_Low; //Assume clock high in IDLE
 	spiStruct.SPI_CPHA = SPI_CPHA_2Edge; //Set data set at upper edge of a clock
 	spiStruct.SPI_NSS = SPI_NSS_Soft; //Disable hardware Chip Select
-	spiStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64; //Set SPI bitrate
+	spiStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8; //Set SPI bitrate
 	spiStruct.SPI_FirstBit = SPI_FirstBit_MSB; //Transmit most significant byte first
 	SPI_Init(SPI1, &spiStruct);
 	SPI_NSSInternalSoftwareConfig(SPI1, SPI_NSSInternalSoft_Set); //Set internal value of Chip Select to high
 	SPI_Cmd(SPI1, ENABLE);
     
     // NSS external pin (PC9)
-    GPIOC->MODER |= ( 0x01 << ( 9 << 1) );
+    GPIOA->MODER |= ( 0x01 << ( 4 << 1) );
     NSS_HIGH;
     SPI_I2S_ReceiveData(SPI1);
     DelayMSec(1);
@@ -94,6 +94,15 @@ WORD SpiGetWord (BYTE addr)
     return result;
 }
 
+void SpiPutWord (BYTE addr, BYTE data)
+{
+    NSS_LOW;
+    
+    SpiPutByte_Internal(addr);
+    SpiPutByte_Internal(data);
+    
+    NSS_HIGH;
+}
 
 void SpiPutDword (BYTE addr, DWORD data)
 {

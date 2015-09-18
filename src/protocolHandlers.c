@@ -50,9 +50,9 @@ protocolResponse protocolHandler (WORD cmd, WORD data)
 static protocolResponse ledsHandler (WORD null)
 {
     protocolResponse result;
-    static WORD ledState; 
+    //atic WORD ledState; 
     
-    ledState = BoardLedsGetState();
+  //  ledState = BoardLedsGetState();
     
     result.dataCnt = 2;
     result.buff = "40";//(BYTE*)&ledState;

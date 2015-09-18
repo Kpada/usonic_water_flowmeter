@@ -1,135 +1,147 @@
 #include "stdAfx.h"
+#include "tdc-gp22.h"
 
 
-float time0, time1;
-WORD stat0, stat1;
-BOOL isTimeout;
-DWORD raw0, raw1;
-BYTE ch1Hits_0 = 0;
-BYTE ch2Hits_0 = 0;
-BYTE ch1Hits_1 = 0;
-BYTE ch2Hits_1 = 0;
+// application data container
+applicationState appState;
 
-gp22Status status0, status1;
-
-FLOAT time0, time1;
-
-const WORD buffSize = 20;
-
-FLOAT   time0Buff [buffSize];
-FLOAT   time1Buff [buffSize];
-WORD    timeBuffPtr = 0;
-
-BOOL remaped = FALSE;
-
-FLOAT av1 = 0.f, av2 = 0.f;
-WORD ii = 0;
-WORD iiMAx = 0;
-static void FireAndParsePulseResults (void)
+// applications helpers proc - flags
+void appSetFlag (WORD flag)         { appState.flags |=  flag; }
+void appClearFlag (WORD flag)       { appState.flags &= ~flag; }
+BOOL appIsFlag (WORD flag)          { return appState.flags & flag; }
+// applications helpers proc - pending
+void appSetPending (WORD pending)   { appState.pending |=  pending; }
+void appClearPending (WORD pending) { appState.pending &= ~pending; }
+BOOL appIsPending (WORD pending)    { return appState.pending & pending; }
+// applications helpers proc - errors
+void appSetError (WORD err)         { appState.errors |=  err; }
+void appClearError (WORD err)       { appState.errors &= ~err; }
+BOOL appIsError (WORD err)          { return appState.errors & err; }
+    
+// appData init proc
+void appDataInit (void)
 {
-    isTimeout = FALSE;
-    
-     
-    Gp22Tof (&time0, &time1, &stat0, &stat1, &isTimeout, &raw0, &raw1);
-    
-    //status0 = Gp22ParseStatus(stat0);
-   // status1 = Gp22ParseStatus(stat1);
-    
-    BoardLcdClear();
-    
-    BoardLcdPutChar( status0.hitsChnl1 + '0', 1);
-
-    BoardLcdPutChar( status1.hitsChnl1 + '0', 3);
-
-   // time0 = Gp22RawValueToTimeConvert(raw0);
-   // time1 = Gp22RawValueToTimeConvert(raw1);
-    
-    time0Buff [timeBuffPtr] = Gp22RawValueToTimeConvert(raw0);
-    time1Buff [timeBuffPtr] = Gp22RawValueToTimeConvert(raw1);
-    
-    time0 =  time0Buff [timeBuffPtr];
-    time1 =  time1Buff [timeBuffPtr];
-    
-    if( time0Buff [timeBuffPtr] > 100000.f && time1Buff[timeBuffPtr] > 100000.f ) {
-
-        timeBuffPtr++;
-        if( timeBuffPtr >= buffSize ) {
-            timeBuffPtr = 0;
-            remaped = TRUE;
-        }
-    }        
-    
-    av1 = 0;
-    av2 = 0;
-    
-    if( remaped )
-        iiMAx = buffSize;
-    else
-        iiMAx = timeBuffPtr;
-    
-        for( ii = 0; ii < iiMAx; ii++ ) {
-            av1 += time0Buff[ii];
-            av2 += time1Buff[ii];
-        }
-    
-    av1 /= iiMAx;
-    av2 /= iiMAx;
-        
-        
-    
-    BoardLcdUpdate();    
-
-    if( isTimeout )
-        BoardLedsTurnLedOn(ledOne);
-    else
-        BoardLedsTurnLedOff(ledOne);
+    appState.errors  = 0;
+    appState.flags   = 0;
+    appState.pending = 0;  
 }
 
-const BYTE pony [] = "my little pony\r\n";
+// 
+dataProcessorData appData;
+
+static void showValue (void)
+{
+    char str [10];
+    
+    if( appIsFlag( flagShowTemp ) ) {
+        sprintf(str, "%.0f %.0f", appData.tempAvg[0], appData.tempAvg[1]);
+        BoardLcdClear();
+        BoardLcdPutStr((BYTE*)str);
+        BoardLcdUpdate();       
+    }
+    
+    else if( appIsFlag( flagShowTof ) ) {
+        
+        BoardLcdClear();
+        
+        if( appData.tof.tmoError ) {
+            BYTE errStr[] = "-----";
+            BoardLcdPutStr((BYTE*)errStr);    
+        }
+        else {
+            sprintf(str, "%.3f", appData.tofAvg);       
+            BoardLcdPutStr((BYTE*)str);
+        }
+        
+        BoardLcdUpdate();      
+    }
+}
+
+static void handleButton (void)
+{
+        // get button
+        boardBtn btnPrsd = BoardButtonGet();
+        if( btnPrsd == btn1 ) {
+            appSetFlag( flagShowTemp );
+            appClearFlag( flagShowTof ); 
+        }
+        else if( btnPrsd == btn3 ) {
+            appSetFlag( flagShowTof );
+            appClearFlag( flagShowTemp ); 
+        }
+            
+    
+}
+
+#define PUT_DATA_TO_CHNL
+
+struct {
+    union {
+        BYTE buff[25];
+        struct {
+            BYTE  startByte;
+            FLOAT tof0, tof1, tofDiff;
+            FLOAT res0, res1;
+            esBL  tofTmo;
+        } data;       
+    } chnl;
+} chnlData;
+
+
+static void putDataPointToChnl (void)
+{
+#ifdef  PUT_DATA_TO_CHNL
+    chnlData.chnl.data.startByte = 0x77;
+    chnlData.chnl.data.res0 = appData.temp.val1;
+    chnlData.chnl.data.res1 = appData.temp.val2;
+    chnlData.chnl.data.tof0 = appData.tof.time0;
+    chnlData.chnl.data.tof1 = appData.tof.time1;
+    chnlData.chnl.data.tofDiff = appData.tof.timeDiff;
+    chnlData.chnl.data.tofTmo = appData.tof.tmoError ? TRUE : FALSE;
+    uartPutBytes( (BYTE*)&chnlData.chnl.buff[0], sizeof( chnlData ) );
+#endif
+}
+
+
+//double clockCorrFactor;
 
 int main (void)
 {
-
-    // clock
+    // clock (default)
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIODEN;
     // delay init
     DelayInit();
-    // spi init
-    SpiInit();
-    // board init
-    BoardLedsInit();
-    BoardButtonsInit();
-    BoardLcdInit();
+    // app
+    appDataInit();
+    // led
+    BoardLedInit();
+    // btns
+    BoardButtonsInit();  
+    //lcd
+    BoardLcdInit();  
+    // data processor
+    DpInit();
+    // uart
     uartInit();
-    // gp22 init
-    if( !Gp22Init() ) {
-             BoardLedsTurnAllOn();
-       // while(1);
+    
+    appSetFlag( flagShowTof );
+    
+    while( 1 ) {
+     //   clockCorrFactor = Gp22GetClkCorrectionFactor() * 8000000UL * 1000UL;
+        // get data
+        DpProcess();
+        appData = DpGetCurDataPoint();
+        // btn
+        handleButton();
+        // put to chnl
+        //putDataPointToChnl();
+        // indication
+        //BoardLedToggle();                  
+        showValue();
+        // wait
+        //Sleep(500);  
+        PWR_EnterSleepMode(PWR_Regulator_ON, PWR_SLEEPEntry_WFI);
     }
-    
-    //FireAndParsePulseResults();
-    
-    while(1) { /*
-        WORD btn1;
-        WORD btn2;
-        btn1 = BoardButtonGet();
-        DelayMSec(200);
-        btn2 = BoardButtonGet();
-        if( btn1 == btn2 )
-            BoardLedsToggle(btn2);
-        DelayMSec(200);*/
-       /* 
-       if( btn1 == btn2 && btn1 == btn3 ) {
-           FireAndParsePulseResults();
-        }*/
-
-      //  uartPutBytes(pony, sizeof(pony) );
-     //   protocolExecute();
-        //DelayMSec(200);
-        FireAndParsePulseResults();
-        DelayMSec(500);
-    }
-    
 }
 
 

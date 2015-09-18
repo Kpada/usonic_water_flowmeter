@@ -48,9 +48,9 @@ enum {
     correctProtocolEnder    = 0x0A0D,
     
     // misc constants
-    protocolHeader_SZE = sizeof(frame.parsed.header),
-    defProtocolTmo  = 50,
-    maxTries        = 3,
+    protocolHeader_SZE      = sizeof(frame.parsed.header),
+    defProtocolTmo          = 50,
+    maxTries                = 3,
 
 };
 

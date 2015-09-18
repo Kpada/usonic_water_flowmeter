@@ -25,30 +25,21 @@ void BoardButtonsInit (void)
 }
 
 #define DECL_CNT_MAX_AND_MIN( btnNum ) \
-        cntMaxBtn##btnNum = cntBtn##btnNum * (100 + cntDeviationPercent) / 100, \
-        cntMinBtn##btnNum = cntBtn##btnNum * (100 - cntDeviationPercent) / 100,
+        cntMaxBtn##btnNum = cntBtn##btnNum + 100, \
+        cntMinBtn##btnNum = (cntBtn##btnNum - 100 > 0 ) ? cntBtn##btnNum - 100 : 0,
 
 enum {
-    cntBtnNone  = 4095 * 8 / 9,
-    cntBtn1     = 4095 * 0,
-    cntBtn2     = 4095 / 2,
-    cntBtn3     = 4095 * 2 / 3,
-    cntBtn4     = 4095 * 3 / 4,
-    cntBtn5     = 4095 * 4 / 5,
-    cntBtn6     = 4095 * 5 / 6,
-    cntBtn7     = 4095 * 6 / 7,
+    cntBtnNone  = 4095 * 3 / 3,
+    cntBtn1     = 4095 * 2 / 3,
+    cntBtn2     = 4095 * 1 / 3,
+    cntBtn3     = 4095 * 0 / 3,
     cntError    = 0xFFFF,
     
     cntDeviationPercent = 1,
     
     DECL_CNT_MAX_AND_MIN(1)
     DECL_CNT_MAX_AND_MIN(2)
-    DECL_CNT_MAX_AND_MIN(3)
-    DECL_CNT_MAX_AND_MIN(4)
-    DECL_CNT_MAX_AND_MIN(5)
-    DECL_CNT_MAX_AND_MIN(6)
-    DECL_CNT_MAX_AND_MIN(7)
-    
+    DECL_CNT_MAX_AND_MIN(3)  
 };
 
 static WORD AdcGetCounts (void)
@@ -69,25 +60,16 @@ boardBtn BoardButtonGet (void)
 {
     
     adcCounts = AdcGetCounts();
-    
-    
+       
     if( cntError == adcCounts )
         return btnNone;
     
-    if( adcCounts > cntMinBtn1 && adcCounts < cntMaxBtn1 )
+    if( adcCounts >= cntMinBtn1 && adcCounts <= cntMaxBtn1 )
         result = btn1;
-    else if( adcCounts > cntMinBtn2 && adcCounts < cntMaxBtn2 )
+    else if( adcCounts >= cntMinBtn2 && adcCounts <= cntMaxBtn2 )
         result = btn2;
-    else if( adcCounts > cntMinBtn3 && adcCounts < cntMaxBtn3 )
+    else if( adcCounts >= cntMinBtn3 && adcCounts <= cntMaxBtn3 )
         result = btn3;
-    else if( adcCounts > cntMinBtn4 && adcCounts < cntMaxBtn4 )
-        result = btn4;
-    else if( adcCounts > cntMinBtn5 && adcCounts < cntMaxBtn5 )
-        result = btn5;
-    else if( adcCounts > cntMinBtn6 && adcCounts < cntMaxBtn6 )
-        result = btn6;
-    else if( adcCounts > cntMinBtn7 && adcCounts < cntMaxBtn7 )
-        result = btn7;
     else 
         result = btnNone;
     

@@ -1,42 +1,76 @@
 #include "stdAfx.h"
 #include "tdc-gp22.h"
+#include "config/tdc-gp22Config.h"
 
 /********* settings **********/
 
-static const WORD tdcQuartzFreqKHz = 24000;
-
+static const WORD tdcQuartzFreqKHz = TDC_QUARTZ_FREQ_KHZ;
+static const WORD tdcFreqKHz = tdcQuartzFreqKHz / tdcMainDiv;
 
 // settings
-enum {
-    // clock
-    tdcMainDiv          = 4,    // 1, 2, 4
-    
-    // fire
-    tdcFirePulsesNum    = 10,   // 0 .. 127
-    tdcFirePulsesDiv    = 6 ,   // 2 .. 16
-
-    
-    // stop
-    tdcStopPulsesChnl1  = 3 ,   // 0 .. 4
-    tdcStopPulsesChnl2  = 0,    // 0 .. 4
-    
-    // irq
-
-      
+     
     /// constants defined by setting
     // reg 0
-    r0FirePulses = ( tdcFirePulsesNum & 0x0F ) << 28, 
-    r0FireDiv    = ( (tdcFirePulsesDiv - 1 ) & 0x0F) << 24,
-    r0ClkDiv     = ( ( tdcMainDiv == 1 ) ? 0 : ( ( tdcMainDiv == 2 ) ? 1 : 2 ) ) << 20,
+    static const DWORD r0FirePulses = ( (DWORD)( (BYTE)tdcFirePulsesNum & 0x0F ) ) << 28;
+    static const DWORD r0FireDiv    = ( (tdcFirePulsesDiv - 1 ) & 0x0F) << 24;
+    static const DWORD r0ClkDiv     = ( ( tdcMainDiv == 1 ) ? 0 : ( ( tdcMainDiv == 2 ) ? 1 : 2 ) ) << 20;
+    static const DWORD r0ClkOn_Msr  = ( (tdcStartCLKHS & 0x03) << 18 );
+    static const DWORD r0ClkCalRes  = ( (tdcAnzPerCalRes/4) < 3 ? (tdcAnzPerCalRes/4) : 3 ) << 22;
     // reg1
-    r1HitIn1     = ( (tdcStopPulsesChnl1 & 0x07 ) << 16 ),
-    r1HitIn2     = ( (tdcStopPulsesChnl2 & 0x07 ) << 19 ),
-    
+    static const DWORD r1HitIn1     = ( (tdcStopPulsesChnl1 & 0x07 ) << 16 );
+    static const DWORD r1HitIn2     = ( (tdcStopPulsesChnl2 & 0x07 ) << 19 );
+    // reg2
+    static const DWORD r2DelVal1    = ( (DWORD)(  ( (FLOAT)(tdcDelayBeforeStop1Nsec)*32*(tdcFreqKHz) )/ 1000000UL ) & 0x7FFFF ) << 8;
+    static const DWORD r2IrqSource  = (DWORD)( (tdcIrqTimeout ? 0x80000000 : 0) | (tdcIrqEndHits ? 0x40000000 : 0) | (tdcIrqALU ? 0x20000000 : 0) );
+    // reg3
+    static const DWORD r3Delrel     = ( (tdcDelrel1 & 0x3F) << 8 ) | ( (tdcDelrel2 & 0x3F) << 14 ) | ( (tdcDelrel3 & 0x3F) << 20 );
+    static const DWORD r3CalcDetect = ( (tdcAutocalcMode2En ? 1 : 0) << 31) | ( (tdcEnFirstWave ? 1 : 0) << 30) | 
+            ( (tdcAluErrorVal ? 1 : 0) << 29) | ( (tdcTmoPreddiv & 0x03) << 27 );
+    // reg4
+    static const DWORD r4Msr        = ( tdcFirstWaveEdge ? ( 0x01 << 15 ) : 0 );
     // reg 6
-    r6FirePulses = ( tdcFirePulsesNum > 15 ) ? (tdcFirePulsesNum >> 4) << 8 : 0 << 8,
-};
+    static const DWORD r6FirePulses = ( tdcFirePulsesNum > 15 ) ? (tdcFirePulsesNum >> 4) << 8 : 0 << 8;
+    static const DWORD r6IrqSource  = ( ((tdcIrqEndEeprom & 0x01UL) << 21) );
 
+ 
+    #define GET_FIRE_FREQ   ( (TDC_QUARTZ_FREQ_KHZ) / (tdcMainDiv) / (tdcFirePulsesDiv) )
+    
+    
+    DWORD initRegsValBuff [7] = 
+    {  
+        0x0003E800 | r0ClkDiv | r0FirePulses | r0FireDiv | r0ClkOn_Msr | r0ClkCalRes,
+        0x21404000 | r1HitIn1 | r1HitIn2,    
+        0x00000000 | r2DelVal1 | r2IrqSource,
+        0x00000000 | r3Delrel | r3CalcDetect,
+        0x00000000 | r4Msr,
+        0x40000000,
+        0xC0C06000 | r6FirePulses | r6IrqSource    
+    };
 
+  
+  
+static DWORD calcOffsetValMv (INT8 mv)
+{
+    DWORD res = 0;
+    
+    if( mv >= 20 ) {
+        mv -= 20;
+        res |= 0x01 << 14;
+    }
+    else if( mv <= -20 ) {
+        mv += 20;
+        res |= 0x01 << 13;
+    }
+    
+    if( mv >= 0 ) {
+        res |= (mv & 0x0F) << 8;
+    }
+    else {
+        res |= ( ( 32 + mv ) & 0x1F ) << 8;
+    }
+    
+    return res;
+}
 
 enum {
     // cmd write to register
@@ -57,16 +91,15 @@ enum {
     cmdRdReg5 = cmdRdReg0 | 0x05,
     cmdRdReg6 = cmdRdReg0 | 0x06,
     
-    // additionam
+    // additional
     cmdPowerOnReset = 0x50,
     cmdInit         = 0x70,
     cmdReadId       = 0xB7, //56 bits
     cmdStartCalRes  = 0x03,
     cmdStartCalTDC  = 0x04,
     cmdFire         = 0x05,
+    cmdStartTempMsr = 0x02,
 };
-
-
 
 
 /******************      helpers    *********************/
@@ -74,8 +107,10 @@ enum {
 __inline static void Gp22SoftReset (void)
 {
     SpiPutByte(cmdPowerOnReset);
+    
     DelayMSec(1);
 }
+
 
 __inline static QWORD Gp22GetId (void)
 {
@@ -86,11 +121,9 @@ __inline static QWORD Gp22GetId (void)
 #define PUT_TO_REG( regNum, cmd )       SpiPutDword( cmdWrReg ## regNum, cmd )
 #define GET_FROM_REG( regNum )          SpiGetDword( cmdRdReg ## regNum )
 
-
+QWORD id;
 static BOOL Gp22CheckConnection (void)
-{
-    QWORD id;
-    
+{ 
     // get id
     id = Gp22GetId();
     
@@ -111,162 +144,146 @@ static BOOL Gp22CheckConnection (void)
 
 BOOL gp22Irq = FALSE;
 
-/// gp22 irq handler
-///
-void EXTI9_5_IRQHandler (void)
-{
-    if( EXTI->PR & ( 0x01UL << 9 ) ) {
-        BoardLedsTurnLedOn(ledFive);
-        gp22Irq = TRUE;
-        EXTI->PR |= (0x01UL << 9 );
-    }
-}
 
-
-
-DWORD readVal;
-float correctionFactor = 0.f;
 #include "math.h"
 
-DWORD rawData [24];
-WORD dataCnt = 0;
-WORD statRegVal = 0;
-//BOOL isTimeout = FALSE;
 
 
-
-DWORD reg1Val = 0x31404000 | r1HitIn1 | r1HitIn2;
-BYTE  reg1HighByte = 0x31;
-
-BOOL Gp22Tof (float* time0, float* time1, WORD* stat0, WORD* stat1, BOOL* isTimeout, DWORD* raw0, DWORD* raw1)
+FLOAT tofRawToValue (DWORD raw)
 {
-    *isTimeout = FALSE;
-    
-    PUT_TO_REG(1, reg1Val);
-    DelayMSec(1);
-    
-    // put init command
-    SpiPutByte(cmdInit);
-    DelayMSec(1);
-    // fire
-    SpiPutByte(0x05);
-    // wfi
-    while( GPIOB->IDR & (0x01 << 9) );
-    // get raw val
-    *raw0 = GET_FROM_REG(3);
-    DelayMSec(1);
-    SpiPutByte(0xB3);
-    SpiPutByte(reg1HighByte);
-    // wfi
-   // while( GPIOB->IDR & (0x01 << 9) );
-    // get stat
-    *stat0 = SpiGetWord(0xB4);
-    *isTimeout |= *stat0 & 0x0600;
+    QWORD tmp = (QWORD)raw * (QWORD)tdcMainDiv * (QWORD)1000000;
+    FLOAT tmpF = (FLOAT) tmp;
+    FLOAT result = ( tmpF ) / tdcQuartzFreqKHz / 65536.f;
+    return result;
+}
 
-    
-    // put init command
-    SpiPutByte(cmdInit);
-    // wfi
-    while( GPIOB->IDR & (0x01 << 9) );
-    // get raw val
-    *raw1 = GET_FROM_REG(3);
-    DelayMSec(1);
-    SpiPutByte(0xB3);
-    SpiPutByte(reg1HighByte);
-    // wfi
-   // while( GPIOB->IDR & (0x01 << 9) );
-    // get stat
-    *stat1 = SpiGetWord(0xB4);
-    *isTimeout |= *stat1 & 0x0600;
-   
-  
-    return *isTimeout;
+static BOOL Gp22_WFI (void)
+{
+    //QWORD wait = GetCurrentTicks();
+    while( GPIOB->IDR & (0x01 << 9) ) {
+       // if( GetTimeSince(wait) > 50 )
+        //        return FALSE;
+    } 
+	
+
+    return TRUE;
 }
 
 
-
-static const FLOAT tRef = 1.f / (FLOAT)tdcQuartzFreqKHz;
-
-FLOAT Gp22RawValueToTimeConvert (DWORD val)
+double Gp22GetClkCorrectionFactor (void)
 {
-    FLOAT fltVal = val / powf(2.f, 16.f);
-    FLOAT result;
+    DWORD corrFactorDwordVal;
+    volatile double mul0 = (double)30.517578125;
+    volatile double mul1 = (double)tdcAnzPerCalRes;
     
-    result = fltVal * tRef * tdcMainDiv * 1000000.f;
+    volatile double corFactorPart = mul0 * mul1;
     
-    return result;
+    // request a data
+    SpiPutByte(cmdStartCalRes);
+    // wfi
+    Gp22_WFI();
+    
+    corrFactorDwordVal = GET_FROM_REG(0);
+    return corFactorPart / tofRawToValue(corrFactorDwordVal);  
 }
 
 /// init
 ///
 BOOL Gp22Init (void)
 {
-    // init interrupt (PB9) (irq - low)
+    
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
     GPIOB->MODER &= ~( 0x03UL << (9 << 1) );    // input
     GPIOB->PUPDR |=  ( 0x01UL << (9 << 1) );    // pull-up
-    EXTI->IMR |= 0x01UL << 9;                   // unmask
-    EXTI->FTSR |= 0x01UL << 9;                  // falling edge
-    SYSCFG->EXTICR[2] |= 0x01UL << 4 ;          // pb9
-    //NVIC_EnableIRQ(EXTI9_5_IRQn);               // irq enable
     
-    //startPulseInit();
-    
-   // TimerPwmInit();
-    DelayMSec(200);
+    DelayMSec(1);
+
     // soft reset
     Gp22SoftReset();
-  // DelayMSec(300);
     // check connection
     if( !Gp22CheckConnection() )
         return FALSE;
     
-     Gp22SoftReset();
+    // reset again
+    Gp22SoftReset();
     DelayMSec(200);
     
- // this code works  
-    PUT_TO_REG(0, 0x00076800 | r0ClkDiv | r0FirePulses | r0FireDiv);
-    PUT_TO_REG(1, 0x21407F00 | r1HitIn1 | r1HitIn2 );
-    PUT_TO_REG(2, 0xA0000000);
-    PUT_TO_REG(3, 0xB8000000);
-    PUT_TO_REG(4, 0x00000000);
-    PUT_TO_REG(5, 0x40000000);
-    PUT_TO_REG(6, 0x00000000 | r6FirePulses);
-
-/*
-    PUT_TO_REG(0, 0x000B6800 | r0ClkDiv | r0FirePulses | r0FireDiv);
-    PUT_TO_REG(1, 0x21444000 );
-    PUT_TO_REG(2, 0xA0000000);
-    PUT_TO_REG(3, 0xD0A24800);
-    PUT_TO_REG(4, 0x20004A00);
-    PUT_TO_REG(5, 0x40000000);
-    PUT_TO_REG(6, 0xC0C06000);
-   */
-    /*
-    SpiPutByte(cmdStartCalRes);
-    while( GPIOB->IDR & (0x01 << 9) );
-    //gp22Irq = FALSE;
-    rawData[0] = GET_FROM_REG(0); 
-    correctionFactor = 61.035f / (rawData[0] / powf(2., 16.) );
-    */
-    PUT_TO_REG(0, 0x0007E800 | r0ClkDiv | r0FirePulses | r0FireDiv);
-  // DelayMSec(300);
-    PUT_TO_REG(1, reg1Val );
-  //  DelayMSec(300);
-    PUT_TO_REG(2, 0xA0000000);
-   // DelayMSec(300);
-    PUT_TO_REG(3, 0xBC000000);
-  //  DelayMSec(300);
-    PUT_TO_REG(4, 0x10000000);
-  //  DelayMSec(300);
-    PUT_TO_REG(5, 0x40000000);
-  //  DelayMSec(300);
-    PUT_TO_REG(6, 0xC0C06000 | r6FirePulses);   
-   
+    // init
+    initRegsValBuff [4] |= calcOffsetValMv( tdcOffsetValMv );
     
+    PUT_TO_REG(0, initRegsValBuff[0] );
+    PUT_TO_REG(1, initRegsValBuff[1] );
+    PUT_TO_REG(2, initRegsValBuff[2] );
+    PUT_TO_REG(3, initRegsValBuff[3] );
+    PUT_TO_REG(4, initRegsValBuff[4] );
+    PUT_TO_REG(5, initRegsValBuff[5] );
+    PUT_TO_REG(6, initRegsValBuff[6] );
+    
+    DelayMSec(200);
+    
+
+        
     return TRUE;
 }
 
+BOOL Gp22Tof (float* time0, float* time1, WORD* stat0, WORD* stat1, BOOL* isTimeout, DWORD* raw0, DWORD* raw1)
+{    
+    // reset tmo flag
+    *isTimeout = FALSE;   
+
+// the first step
+    // put init command
+    SpiPutByte(cmdInit);
+    DelayMSec(1);
+    SpiPutByte(cmdFire);    
+    // wfi
+    Gp22_WFI();
+    // get stat
+    *stat0 = SpiGetWord(0xB4);
+    *isTimeout |= *stat0 & 0x0600;
+    // get data
+    *raw0 = SpiGetDword(0xB3);
+    *time0 = tofRawToValue(*raw0);
+    
+// the second 
+    // put init command
+    SpiPutByte(cmdInit);
+    // wfi
+    Gp22_WFI();   
+    // get stat
+    *stat1 = SpiGetWord(0xB4);
+    *isTimeout |= *stat1 & 0x0600;
+    // get data
+    *raw1 = SpiGetDword(0xB3);
+    *time1 = tofRawToValue(*raw1);
+    
+    return *isTimeout;
+}
+
+BOOL gp22GetTemp (WORD* stat, DWORD* r1, DWORD* r2, DWORD* r3, DWORD* r4)
+{    
+    BOOL err = FALSE;
+    
+    SpiPutByte(cmdInit);
+    DelayMSec(1);
+    SpiPutByte(cmdStartTempMsr);
+    
+    // wfi
+    if( !Gp22_WFI() )
+        return FALSE;
+    
+    // get status
+    *stat = SpiGetWord(0xB4);
+    if( *stat & 0x1E00 || err ) 
+        return FALSE;
+    
+    // data 
+    *r1 = SpiGetDword(0xB0);
+    *r2 = SpiGetDword(0xB1);
+    *r3 = SpiGetDword(0xB2);
+    *r4 = SpiGetDword(0xB3);
+    return TRUE;
+}
 
 gp22Status Gp22ParseStatus (WORD stat)
 {
@@ -285,100 +302,3 @@ gp22Status Gp22ParseStatus (WORD stat)
     
     return result; 
 }
-
-
-/*
-static void TimerPwmInit (void)
-{
-    GPIO_InitTypeDef PORT;
-    
-    RCC->APB2ENR |= RCC_AHBENR_GPIOBEN; // pb6, pb7
-    RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
-    
-    PORT.GPIO_Pin = (GPIO_Pin_6 | GPIO_Pin_7);
-    PORT.GPIO_Mode = GPIO_Mode_AF;
-    PORT.GPIO_Speed = GPIO_Speed_40MHz;
-    GPIO_Init(GPIOB, &PORT);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_TIM4);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_TIM4);
-    
-    TIM4->CCER  |=  (TIM_CCER_CC2E | TIM_CCER_CC1E);
-    TIM4->CCMR1 |=  (TIM_CCMR1_OC2M_0 | TIM_CCMR1_OC2M_1 | TIM_CCMR1_OC2M_2) | (TIM_CCMR1_OC1M_0 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2);
-
-    TIM4->ARR = 26;
-    TIM4->CCR2 = 0;
-    TIM4->CCR1 = 0;
-    TIM4->CNT = 0;    
-    TIM4->DIER |= TIM_DIER_CC1IE | TIM_DIER_CC2IE;  
-    NVIC_SetPriority(TIM4_IRQn, 0);
-    NVIC_EnableIRQ(TIM4_IRQn);
-    
-    
-    //TIM4->CR1 |= TIM_CR1_CEN;
-    TIM4->SR &= ~ ( TIM_SR_UIF | TIM_SR_CC1IF | TIM_SR_CC2IF | TIM_SR_CC3IF | TIM_SR_CC4IF);  
-}
-
-
-void TIM4_IRQHandler (void)
-{
-    static WORD counter = 0;
-    
-    WORD source = TIM4->SR;
-    
-    TIM4->SR &= ~ ( TIM_SR_UIF | TIM_SR_CC1IF | TIM_SR_CC2IF | TIM_SR_CC3IF | TIM_SR_CC4IF); 
-        
-    if( source & (TIM_SR_CC1IF | TIM_SR_CC2IF ) ) {
-        counter++;
-        if( counter >= 6 ) {
-            TIM4->CR1 &= ~TIM_CR1_CEN;
-            counter = 0;
-        }
-    }
-    
-   
-}
-
-void PutPulses0 (void)
-{
-    TIM4->CNT = 0;
-    TIM4->CCR1 = 13;
-    TIM4->CCR2 = 0;
-    TIM4->CR1 |= TIM_CR1_CEN;
-    
-    while( ! (TIM4->CR1 & TIM_CR1_CEN ) );
-    
-}
-
-void PutPulses1 (void)
-{
-    TIM4->CNT = 0;
-    TIM4->CCR1 = 0;
-    TIM4->CCR2 = 13;
-    TIM4->CR1 |= TIM_CR1_CEN;
-    
-    while( ! (TIM4->CR1 & TIM_CR1_CEN ) );
-    
-}
-
-static void startPulseInit (void)
-{
-    // PA4
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;    
-    
-    GPIOA->MODER |= 0x01 << (4 << 1);
-    GPIOA->ODR   &= ~( 0x01 << 4);
-    
-}
-
-static void StartPulse (void)
-{
-   //BYTE i = 5;
-    GPIOA->ODR |= (0x01 << 4);
-   // while( --i);
-    GPIOA->ODR &= ~( 0x01 << 4);
-}
-
-#define START_PULSE     StartPulse();
-  */    
-
-

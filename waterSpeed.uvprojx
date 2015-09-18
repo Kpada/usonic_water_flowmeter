@@ -1,25 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="project_proj.xsd">
+<Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="project_projx.xsd">
 
-  <SchemaVersion>1.1</SchemaVersion>
+  <SchemaVersion>2.1</SchemaVersion>
 
   <Header>### uVision Project, (C) Keil Software</Header>
 
   <Targets>
     <Target>
-      <TargetName>hw-1.0-demoBoard</TargetName>
+      <TargetName>hw-2.0-demoBoard</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <TargetOption>
         <TargetCommonOption>
           <Device>STM32L100RB</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <Cpu>IRAM(0x20000000-0x200027FF) IROM(0x08000000-0x0801FFFF) CLOCK(8000000) CPUTYPE("Cortex-M3")</Cpu>
+          <PackID>Keil.STM32L1xx_DFP.1.0.2</PackID>
+          <PackURL>http://www.keil.com/pack/</PackURL>
+          <Cpu>IROM(0x08000000,0x20000) IRAM(0x20000000,0x2800) CPUTYPE("Cortex-M3") CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
-          <StartupFile>"STARTUP\ST\STM32L1xx\startup_stm32l1xx_md.s" ("STM32L1xx Medium density Startup Code")</StartupFile>
-          <FlashDriverDll>ULP2CM3(-O207 -S8 -C0 -FO7 -FD20000000 -FC800 -FN1 -FF0STM32L1xx_128 -FS08000000 -FL020000)</FlashDriverDll>
+          <StartupFile></StartupFile>
+          <FlashDriverDll>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC1000 -FN1 -FF0STM32L1xx_128 -FS08000000 -FL020000 -FP0($$Device:STM32L100RB$Flash\STM32L1xx_128.FLM))</FlashDriverDll>
           <DeviceId>7349</DeviceId>
-          <RegisterFile>stm32l1xx.h</RegisterFile>
+          <RegisterFile>$$Device:STM32L100RB$Device\Include\STM32L1xx.h</RegisterFile>
           <MemoryEnv></MemoryEnv>
           <Cmp></Cmp>
           <Asm></Asm>
@@ -29,14 +31,14 @@
           <SLE66CMisc>-DSTM32L1XX_MD</SLE66CMisc>
           <SLE66AMisc></SLE66AMisc>
           <SLE66LinkerMisc></SLE66LinkerMisc>
-          <SFDFile>SFD\ST\STM32L1xx\STM32L100.SFR</SFDFile>
+          <SFDFile>$$Device:STM32L100RB$SVD\STM32L100.svd</SFDFile>
           <bCustSvd>0</bCustSvd>
           <UseEnv>0</UseEnv>
           <BinPath></BinPath>
           <IncludePath></IncludePath>
           <LibPath></LibPath>
-          <RegisterFilePath>ST\STM32L1xx\</RegisterFilePath>
-          <DBRegisterFilePath>ST\STM32L1xx\</DBRegisterFilePath>
+          <RegisterFilePath></RegisterFilePath>
+          <DBRegisterFilePath></DBRegisterFilePath>
           <TargetStatus>
             <Error>0</Error>
             <ExitCodeStop>0</ExitCodeStop>
@@ -82,6 +84,8 @@
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
+            <nStopA1X>0</nStopA1X>
+            <nStopA2X>0</nStopA2X>
           </AfterMake>
           <SelectedForBatchBuild>0</SelectedForBatchBuild>
           <SVCSIdString></SVCSIdString>
@@ -348,7 +352,7 @@
             <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
-            <OneElfS>0</OneElfS>
+            <OneElfS>1</OneElfS>
             <Strict>0</Strict>
             <EnumInt>0</EnumInt>
             <PlainCh>0</PlainCh>
@@ -359,11 +363,13 @@
             <uSurpInc>0</uSurpInc>
             <uC99>0</uC99>
             <useXO>0</useXO>
+            <v6Lang>0</v6Lang>
+            <v6LangP>0</v6LangP>
             <VariousControls>
               <MiscControls></MiscControls>
               <Define>USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>.\src;..\..\..\ekosf\common;.\src\STM32L1xx_StdPeriph_Driver\inc</IncludePath>
+              <IncludePath>.\src;.\src\STM32L1xx_StdPeriph_Driver\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -407,6 +413,11 @@
           <GroupName>startup</GroupName>
           <Files>
             <File>
+              <FileName>uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\uart.c</FilePath>
+            </File>
+            <File>
               <FileName>startup_stm32l1xx_md.s</FileName>
               <FileType>2</FileType>
               <FilePath>.\src\startup\startup_stm32l1xx_md.s</FilePath>
@@ -432,16 +443,6 @@
               <FilePath>.\src\spi.c</FilePath>
             </File>
             <File>
-              <FileName>uart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\uart.c</FilePath>
-            </File>
-            <File>
-              <FileName>ringbuff.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\ekosf\common\ringbuff.c</FilePath>
-            </File>
-            <File>
               <FileName>protocol.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\protocol.c</FilePath>
@@ -450,6 +451,16 @@
               <FileName>protocolHandlers.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\protocolHandlers.c</FilePath>
+            </File>
+            <File>
+              <FileName>tdc-gp22.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\tdc-gp22.c</FilePath>
+            </File>
+            <File>
+              <FileName>dataProcessor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\dataProcessor.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -462,19 +473,14 @@
               <FilePath>.\src\demoBoard\boardLeds.c</FilePath>
             </File>
             <File>
-              <FileName>boardButtons.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\demoBoard\boardButtons.c</FilePath>
-            </File>
-            <File>
               <FileName>boardLcd.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\demoBoard\boardLcd.c</FilePath>
             </File>
             <File>
-              <FileName>tdc-gp22.c</FileName>
+              <FileName>boardButtons.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\tdc-gp22.c</FilePath>
+              <FilePath>.\src\demoBoard\boardButtons.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -489,7 +495,7 @@
             <File>
               <FileName>typedef.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\..\..\ekosf\common\typedef.h</FilePath>
+              <FilePath>.\src\typedef.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -497,9 +503,14 @@
           <GroupName>common</GroupName>
           <Files>
             <File>
+              <FileName>ringbuff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\ringbuff.c</FilePath>
+            </File>
+            <File>
               <FileName>delay.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\ekosf\common\delay.c</FilePath>
+              <FilePath>.\src\delay.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -531,10 +542,31 @@
               <FileType>1</FileType>
               <FilePath>.\src\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_usart.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32l1xx_pwr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_pwr.c</FilePath>
+            </File>
           </Files>
+        </Group>
+        <Group>
+          <GroupName>::CMSIS</GroupName>
         </Group>
       </Groups>
     </Target>
   </Targets>
+
+  <RTE>
+    <apis/>
+    <components>
+      <component Cclass="CMSIS" Cgroup="CORE" Cvendor="ARM" Cversion="4.1.0" condition="CMSIS Core">
+        <package name="CMSIS" schemaVersion="1.3" url="http://www.keil.com/pack/" vendor="ARM" version="4.3.0"/>
+        <targetInfos>
+          <targetInfo name="hw-2.0-demoBoard"/>
+        </targetInfos>
+      </component>
+    </components>
+    <files/>
+  </RTE>
 
 </Project>
