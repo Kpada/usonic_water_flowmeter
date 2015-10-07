@@ -25,6 +25,7 @@
 #include "delay.h"
 #include "protocol.h"
 #include "dataProcessor.h"
+#include "crc.h"
 
 
 // board

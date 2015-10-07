@@ -1,62 +1,57 @@
 #include "stdAfx.h"
 #include "protocol.h"
+#include "rpc.h"
 
-#include "protocolHandlers.h"
 
-// there is a simple modbus implementation
+/// there is a simple master-slave rpc protocol implementation
+///
 
 enum {
-    frameSize = 17,
-    addDataSize = 8,
-    frameBasePartSize = frameSize - addDataSize, // header + lrc + ender
+    // frame structure
+    protocolHeader_SZE      = 4,    // header size (bytes)
+    protocolMaxBuffLen      = 255,  // max buff size (bytes) = 0xFF
+    protocolMaxDataBuff_SZE = protocolMaxBuffLen - protocolHeader_SZE, // max data buff size (bytes)
+    
+    // frame constants
+    markerRequest           = 0x9A, // correct master->slave request marker
+    markerResponse          = 0x9B, // correct slave->master response marker
+   
+    // misc constants
+    defProtocolTmo          = 50,   // tmo, msec
+    maxTries                = 3,    // tries
 };
+
 
 #pragma pack(push, 1)
 
 // frame
 #pragma anon_unions
 struct {
-    // frame header
-    union {
-        BYTE data [frameSize];
+    union { 
+        // non parsed frame, like a buffer
+        BYTE buff [protocolMaxBuffLen];
+        // parsed frame, like a structure
         struct {
             struct {
                 struct {
-                    BYTE marker;
-                    WORD slaveAddr;
-                    WORD func;
-                }    header;
+                    BYTE marker;    // marker
+                    BYTE dataLen;   // data buffer len
+                    WORD crc;       // checksum
+                } header;
                 // main data
-                BYTE addData [addDataSize];
-                // crc
-                WORD crc;
-                // frame ender
-                WORD ender;
+                BYTE data [protocolMaxDataBuff_SZE]; // data buffer
             };
-        } parsed;
+        } parsedFrame;
     };
-
+    BYTE totalDataLen;
 } frame;
 
 #pragma pack(pop)
 
 
-enum {
-    // frame constants
-    correctProtocolMarker   = 0x3A,
-    correctSlaveAddr        = 0x3130,   
-    correctProtocolEnder    = 0x0A0D,
-    
-    // misc constants
-    protocolHeader_SZE      = sizeof(frame.parsed.header),
-    defProtocolTmo          = 50,
-    maxTries                = 3,
-
-};
-
-
-
-static BOOL findAndCheckHeader (void)
+/// check uart and try to find the correct header structure
+///
+static BOOL findAndCheckTheHeader (void)
 {
     BOOL isFound = FALSE;
     WORD tries = maxTries;
@@ -64,17 +59,17 @@ static BOOL findAndCheckHeader (void)
     while( !isFound && --tries ) {
         // try to get a header
         DWORD tmo = uartEstimateGet(protocolHeader_SZE) + defProtocolTmo;
-        BYTE* buff = (BYTE*)&frame.parsed.header;
+        BYTE* buff = (BYTE*)&frame.buff[0];
         DWORD read;
         read = uartGetBytes((BYTE*)buff, protocolHeader_SZE, tmo);
         // check a size
         if( protocolHeader_SZE == read ) {
-            // correct, find the marker
+            // size is correct, try to find the marker
             BOOL hdrMarkerFound = FALSE;
             const BYTE* pos = buff;
             const BYTE* end = buff + protocolHeader_SZE;
             while( !hdrMarkerFound && pos < end ) {
-                hdrMarkerFound = *pos == correctProtocolMarker;
+                hdrMarkerFound = *pos == markerRequest;
                 if( !hdrMarkerFound )
                     ++pos;
             }
@@ -97,164 +92,122 @@ static BOOL findAndCheckHeader (void)
             }       
         }
     }
-    return isFound;
-}
-
-static void swap_ (BYTE* b0, BYTE* b1)
-{
-    BYTE b;
     
-    b = *b1;
-    *b1 = *b0;
-    *b0 = b;
-}
-
-static BOOL additionalDataGet (void)
-{
-    DWORD dataLen = addDataSize + 2 + 2;
-    DWORD tmo = uartEstimateGet(dataLen) + defProtocolTmo;
-    BYTE* buff = (BYTE*)&frame.parsed.addData;
-    DWORD read;
-    read = uartGetBytes((BYTE*)buff, dataLen, tmo);
-    
-    swap_(&frame.data[13], &frame.data[14]);
-    
-    return read == dataLen;
-}
-
-static WORD calcLrc (const BYTE* buff, WORD len)
-{
-    WORD result = 0;
-    BYTE tempByte;
-    BYTE i;
-    BYTE lrc = 0;
-    
-    for( i = 0; i < len/2; i++ ) {
-        BYTE b0, b1;
-        
-		b0 = *buff++;
-        b1 = *buff++;
-        
-        b0 = b0 <= '9' ? b0 - 0x30 : b0 - 0x31;
-        b1 = b1 <= '9' ? b1 - 0x30 : b1 - 55;
-        
-        tempByte = b0 << 4 | b1;
-		//parts[i] = tempByte;
-
-		lrc += tempByte;
+    if( isFound ) {
+        // check crc
+        WORD crcCalculated = checksum16( (BYTE*)&frame.parsedFrame.header.marker, protocolHeader_SZE - 2 );
+        if( crcCalculated == frame.parsedFrame.header.crc )
+            return TRUE;      
     }
     
-    // 
-	lrc = -lrc;
+    return FALSE;
+}
+
+
+/// get a data buff
+///
+static BOOL additionalDataGet (void)
+{
+    // get data len
+    DWORD dataLen = frame.parsedFrame.header.dataLen;
+    // tmo
+    DWORD tmo = uartEstimateGet(dataLen) + defProtocolTmo;
+    // buff
+    BYTE* buff = (BYTE*)&frame.parsedFrame.data[0];
  
-    // the high byte
-    tempByte = lrc >> 4;
-    if( tempByte < 10 )
-        result |= tempByte + 0x30;
-    else
-        result |= tempByte + 55;   
-    result <<= 8;
-
-	// handle the low byte
-    tempByte = lrc & 0x0F;
-    if( tempByte < 10 )
-        result |= tempByte + 0x30;
-    else
-        result |= tempByte + 55;    
-      
-
-    return result;
-} 
-
-static BOOL ckeckAddress (void)
-{
-    return correctSlaveAddr == frame.parsed.header.slaveAddr;
-}
-
-static BOOL checkLrc (void)
-{
-    WORD calculatedLrc = calcLrc(&frame.data[1], 12);
+    // get
+    DWORD read = uartGetBytes((BYTE*)buff, dataLen, tmo);
     
-    return calculatedLrc == frame.parsed.crc;
-}
-
-static BOOL checkEnder (void)
-{
-    return frame.parsed.ender == correctProtocolEnder;
-}
-
-static BYTE byteToAscii (BYTE byte)
-{
-    if( byte < 10 )
-        byte += 0x30;
-    else
-        byte += 55;
-
-    return byte;
-}
-
-
-BYTE responseBuff [64];
-
-// send the same header, responce, lrc and ender
-static void sendResponse (protocolResponse response)
-{
+    // return
+    if( read == dataLen ) {
+        // calc crc
+        WORD crcCalculated = checksum16 (buff, dataLen - 2);
+        // get crc
+        WORD crcObtained = buff[dataLen-2] | ( buff[dataLen-1] << 8 );    
+        // compare it
+        return crcObtained == crcCalculated;
+    }
     
-    WORD lrc = 0;
-    WORD ender = correctProtocolEnder;
-    WORD copyAddr = 0;
-    if( response.buff && response.dataCnt ) {
-        //BYTE* responseBuff = NULL;
-       // responseBuff = (BYTE*) malloc(response.dataCnt + frameBasePartSize);
-        // copy header
-        memcpy(responseBuff + copyAddr, frame.data, protocolHeader_SZE);
-        copyAddr += protocolHeader_SZE;
-        // copy data size
-        //memcpy(responseBuff + copyAddr, (BYTE*)&response.dataCnt, 2);
-       // response.dataCnt /= 2;
-        //response.dataCnt /= 2;
-        responseBuff[copyAddr]     = (response.dataCnt >> 8 ) / 2 + 0x30;
-        responseBuff[copyAddr + 1] = (response.dataCnt & 0x0F ) / 2 + 0x30;
-        copyAddr += 2;
-        //response.dataCnt *= 2;
-        // copy data
-        memcpy(responseBuff + copyAddr, response.buff, response.dataCnt );
-        copyAddr += response.dataCnt;
-        // calc lrc
-        lrc = calcLrc(responseBuff + 1, 2 + response.dataCnt + protocolHeader_SZE - 1);
-        responseBuff[copyAddr]     = (lrc >> 8);
-        responseBuff[copyAddr + 1] = (lrc & 0xFF);
-        copyAddr += 2;
-        // ender
-        memcpy(responseBuff + copyAddr, (BYTE*)&ender, 2);
-        copyAddr += 2;
-        
-        uartPutBytes(responseBuff, copyAddr);
-        
-        //free(responseBuff);
+    return FALSE;
+}
+
+
+BOOL putResponse (void) 
+{
+    WORD crc = 0;
+    WORD totalBufferLen = 0;
+    DWORD put = 0;
+    
+    // header
+    frame.parsedFrame.header.marker = markerResponse;
+    frame.parsedFrame.header.dataLen = frame.totalDataLen;
+    frame.parsedFrame.header.crc = checksum16( (BYTE*)&frame.parsedFrame.header.marker, 2 );
+    // data crc
+    crc = checksum16( (BYTE*)&frame.parsedFrame.data[0], frame.totalDataLen - 2 );
+    frame.parsedFrame.data[frame.totalDataLen - 2] = (BYTE)crc;
+    frame.parsedFrame.data[frame.totalDataLen - 1] = (BYTE)( crc >> 8 );
+    
+    // put
+    totalBufferLen = frame.totalDataLen + protocolHeader_SZE;
+    put = uartPutBytes( (BYTE*)&frame.buff[0], totalBufferLen );
+    
+    return put == totalBufferLen;
+}
+
+static WORD getRpcId (void)
+{
+	// the first 2 bytes 
+	return frame.parsedFrame.data[0] | frame.parsedFrame.data[1] << 8;
+}
+
+static BYTEARRAY getRpcInBuff (void)
+{
+	BYTEARRAY ba;
+	ba.size = frame.parsedFrame.header.dataLen - 2 - 2;
+	ba.data = frame.parsedFrame.data + 2;
+	return ba;
+}
+
+static void prepareTheDataToBeSent (rpcState* state)
+{
+    const WORD lenId = 2;
+    const WORD lenStatus = 2;
+    // id
+    memcpy(  (void*)&frame.parsedFrame.data[0], (void*)&state->id, lenId );
+    // status
+    frame.parsedFrame.data [2] = state->error ? 0x01 : 0x00;
+    frame.parsedFrame.data [3] = 0x00; 
+    // data
+    memcpy( (void*)&frame.parsedFrame.data[4], state->dataOut, state->dataOutLen );
+    
+    frame.totalDataLen = state->dataOutLen + lenId + lenStatus + 2; // 2 is dataCrc
+    
+    // data allign
+    if( frame.totalDataLen % 2 ) {
+        frame.parsedFrame.data[ lenId + lenStatus + state->dataOutLen ] = 0; // empty byte
+        frame.totalDataLen++;
     }
 }
 
 void protocolExecute (void)
 {
     // try to get a header
-    if( findAndCheckHeader() ) {
-        // check a slave address
-        if( ckeckAddress() ) {
+    if( findAndCheckTheHeader() ) {
             // get data
             if( additionalDataGet() ) {
-                // check lrc
-                if( checkLrc() && checkEnder() ) {
-                    // frame is correct
-                    WORD data;
-                    protocolResponse response;
-                    memcpy((BYTE*)&data, &frame.parsed.addData[7], 2);            
-                    response = protocolHandler(frame.parsed.header.func, data);
-                    // send response
-                    sendResponse(response);
-                }
+                // frame is correct
+				// fill the state 
+				rpcState state;
+				state.error = FALSE;
+				state.id = getRpcId();
+				state.dataIn = getRpcInBuff();
+				// execute
+				rpcExecute(&state);
+                // prepare an answer
+                prepareTheDataToBeSent(&state);
+                // put an answer
+                putResponse();
             }
-        }
     }        
 }
 

@@ -7,6 +7,13 @@ typedef struct {
     WORD            pending;    
 } applicationState;
 
+
+typedef struct {
+    FLOAT tof1, tof2;
+    FLOAT r1, r2;
+} applicationData;
+
+
 enum tag_appErrors{
     // tdc errors
     errOk                   = 0x00,

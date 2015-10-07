@@ -2,8 +2,10 @@
 #include "tdc-gp22.h"
 
 
+// application state container
+applicationState 	appState;
 // application data container
-applicationState appState;
+applicationData 	appData;
 
 // applications helpers proc - flags
 void appSetFlag (WORD flag)         { appState.flags |=  flag; }
@@ -27,14 +29,14 @@ void appDataInit (void)
 }
 
 // 
-dataProcessorData appData;
+dataProcessorData appDataFull;
 
 static void showValue (void)
 {
     char str [10];
     
     if( appIsFlag( flagShowTemp ) ) {
-        sprintf(str, "%.0f %.0f", appData.tempAvg[0], appData.tempAvg[1]);
+        sprintf(str, "%.0f %.0f", appDataFull.tempAvg[0], appDataFull.tempAvg[1]);
         BoardLcdClear();
         BoardLcdPutStr((BYTE*)str);
         BoardLcdUpdate();       
@@ -44,12 +46,12 @@ static void showValue (void)
         
         BoardLcdClear();
         
-        if( appData.tof.tmoError ) {
+        if( appDataFull.tof.tmoError ) {
             BYTE errStr[] = "-----";
             BoardLcdPutStr((BYTE*)errStr);    
         }
         else {
-            sprintf(str, "%.3f", appData.tofAvg);       
+            sprintf(str, "%.3f", appDataFull.tofAvg);       
             BoardLcdPutStr((BYTE*)str);
         }
         
@@ -73,7 +75,7 @@ static void handleButton (void)
     
 }
 
-#define PUT_DATA_TO_CHNL
+//#define PUT_DATA_TO_CHNL
 
 struct {
     union {
@@ -82,7 +84,7 @@ struct {
             BYTE  startByte;
             FLOAT tof0, tof1, tofDiff;
             FLOAT res0, res1;
-            esBL  tofTmo;
+            BOOL  tofTmo;
         } data;       
     } chnl;
 } chnlData;
@@ -92,12 +94,12 @@ static void putDataPointToChnl (void)
 {
 #ifdef  PUT_DATA_TO_CHNL
     chnlData.chnl.data.startByte = 0x77;
-    chnlData.chnl.data.res0 = appData.temp.val1;
-    chnlData.chnl.data.res1 = appData.temp.val2;
-    chnlData.chnl.data.tof0 = appData.tof.time0;
-    chnlData.chnl.data.tof1 = appData.tof.time1;
-    chnlData.chnl.data.tofDiff = appData.tof.timeDiff;
-    chnlData.chnl.data.tofTmo = appData.tof.tmoError ? TRUE : FALSE;
+    chnlData.chnl.data.res0 = appDataFull.temp.val1;
+    chnlData.chnl.data.res1 = appDataFull.temp.val2;
+    chnlData.chnl.data.tof0 = appDataFull.tof.time0;
+    chnlData.chnl.data.tof1 = appDataFull.tof.time1;
+    chnlData.chnl.data.tofDiff = appDataFull.tof.timeDiff;
+    chnlData.chnl.data.tofTmo = appDataFull.tof.tmoError ? TRUE : FALSE;
     uartPutBytes( (BYTE*)&chnlData.chnl.buff[0], sizeof( chnlData ) );
 #endif
 }
@@ -126,21 +128,29 @@ int main (void)
     
     appSetFlag( flagShowTof );
     
+	
     while( 1 ) {
      //   clockCorrFactor = Gp22GetClkCorrectionFactor() * 8000000UL * 1000UL;
+		
         // get data
-        //DpProcess();
-        appData = DpGetCurDataPoint();
+        DpProcess();
+        appDataFull = DpGetCurDataPoint();
+		appData.r1 = appDataFull.tempAvg[0];
+		appData.r2 = appDataFull.tempAvg[1];
+		appData.tof1 = appDataFull.tof.time0;
+		appData.tof1 = appDataFull.tof.time1;
+		
+		protocolExecute();
         // btn
-        handleButton();
+        //handleButton();
         // put to chnl
         //putDataPointToChnl();
         // indication
         //BoardLedToggle();                  
-        showValue();
+        //showValue();
         // wait
         //Sleep(500);  
-        PWR_EnterSleepMode(PWR_Regulator_ON, PWR_SLEEPEntry_WFI);
+        //PWR_EnterSleepMode(PWR_Regulator_ON, PWR_SLEEPEntry_WFI);
     }
 }
 
