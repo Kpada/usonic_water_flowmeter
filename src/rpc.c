@@ -36,7 +36,6 @@ static WORD rpcTableElementsNum = sizeof(rpcTable) / sizeof(rpcHandler);
 ///
 static rpcHandler findProc (WORD id)
 {
-	rpcHandler procedure;
 	WORD idx = 0;
 	BOOL weGotIt = FALSE;
 	

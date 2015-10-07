@@ -3,12 +3,12 @@
 
 extern applicationData appData;
 
-BYTEARRAY rpcProc1 (void)
+BYTEARRAY rpcGetData (void)
 {
 	BYTEARRAY ba;
 	
     static BYTE data [sizeof(appData)];
-	memcpy( data, (BYTE*)&appData.r1, sizeof(appData));
+	memcpy( data, (BYTE*)&appData.tof1, sizeof(appData));
 	
     ba.size = sizeof(appData);
     ba.data = data;

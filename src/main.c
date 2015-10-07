@@ -58,7 +58,7 @@ static void showValue (void)
         BoardLcdUpdate();      
     }
 }
-
+/*
 static void handleButton (void)
 {
         // get button
@@ -103,9 +103,8 @@ static void putDataPointToChnl (void)
     uartPutBytes( (BYTE*)&chnlData.chnl.buff[0], sizeof( chnlData ) );
 #endif
 }
+*/
 
-
-//double clockCorrFactor;
 
 int main (void)
 {
@@ -141,16 +140,6 @@ int main (void)
 		appData.tof1 = appDataFull.tof.time1;
 		
 		protocolExecute();
-        // btn
-        //handleButton();
-        // put to chnl
-        //putDataPointToChnl();
-        // indication
-        //BoardLedToggle();                  
-        //showValue();
-        // wait
-        //Sleep(500);  
-        //PWR_EnterSleepMode(PWR_Regulator_ON, PWR_SLEEPEntry_WFI);
     }
 }
 
