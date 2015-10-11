@@ -28,12 +28,11 @@
 #include "crc.h"
 
 
+#include "data.h"
+
 // board
 #include "demoBoard/boardLeds.h"
 #include "demoBoard/boardLcd.h"
-#include "demoBoard/boardButtons.h"
-
-
 
 // default
 #include <stdio.h>

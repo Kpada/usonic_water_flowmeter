@@ -168,6 +168,7 @@ static BYTEARRAY getRpcInBuff (void)
 	return ba;
 }
 
+
 static void prepareTheDataToBeSent (rpcState* state)
 {
     const WORD lenId = 2;
@@ -177,8 +178,17 @@ static void prepareTheDataToBeSent (rpcState* state)
     // status
     frame.parsedFrame.data [2] = state->error ? 0x01 : 0x00;
     frame.parsedFrame.data [3] = 0x00; 
-    // data
-    memcpy( (void*)&frame.parsedFrame.data[4], state->dataOut, state->dataOutLen );
+    
+    // parse data
+    
+    if( dataType_BA == state->dataOutType ) {
+        BYTEARRAY ba;
+        const BYTE baSizeLen = sizeof(ba.size);
+        ba = *(BYTEARRAY*)state->dataOut;
+        memcpy( (BYTE*)&frame.parsedFrame.data[4], (BYTE*)&ba.size, baSizeLen );
+        memcpy( (BYTE*)&frame.parsedFrame.data[4 + baSizeLen], ba.data, state->dataOutLen - baSizeLen );      
+    }
+    
     
     frame.totalDataLen = state->dataOutLen + lenId + lenStatus + 2; // 2 is dataCrc
     
@@ -194,7 +204,7 @@ void protocolExecute (void)
     // try to get a header
     if( findAndCheckTheHeader() ) {
             // get data
-            if( additionalDataGet() ) {
+            if( additionalDataGet() ) {        
                 // frame is correct
 				// fill the state 
 				rpcState state;

@@ -11,6 +11,7 @@ typedef struct {
 typedef struct {
     FLOAT tof1, tof2;
     FLOAT r1, r2;
+    FLOAT tofDiffAvg;
 } applicationData;
 
 
@@ -26,8 +27,7 @@ enum tag_appErrors{
 };
 
 enum tag_appFlags {
-    flagShowTemp            = 0x01,
-    flagShowTof             = 0x02,
+    flagShowTof             = 0x01,
 };
 
 

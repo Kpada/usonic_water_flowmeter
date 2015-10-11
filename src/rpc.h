@@ -9,6 +9,22 @@ enum {
 	DECL_PROC_SIGNATURE1( BYTEARRAY, void) ,
 };
 
+// rpc buffer type
+enum {
+    dataType_void = 0,
+    dataType_uint8,
+    dataType_uint16,
+    dataType_uint32,
+    dataType_uint64,
+    dataType_int8,
+    dataType_int16,
+    dataType_int32,
+    dataType_int64,
+    dataType_float,
+    dataType_double,
+    dataType_BA,   
+};
+
 // rpc status
 
 typedef struct {
@@ -16,6 +32,7 @@ typedef struct {
 	WORD 		id;				// procedure id
 	BYTEARRAY	dataIn;			// input data buffer
 	WORD		dataOutLen;		
+    WORD        dataOutType;
 	void* 		dataOut;		// output data
 } rpcState;
 

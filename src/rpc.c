@@ -72,12 +72,14 @@ void rpcExecute (rpcState* state)
 	
 	// call a proc
 	switch( signature ) {
+        
 		// input - void;	output - BYTEARRAY
 		case SIG_BYTEARRAY_PROC_void: {
 			TYPE_BYTEARRAY_PROC_void procedure = (TYPE_BYTEARRAY_PROC_void)handler.proc;
 			BYTEARRAY ba = procedure();	
-			rpcResult = (void*)&ba;
+			rpcResult  = (void*)&ba.size;
 			rpcResultLen = ba.size + sizeof(ba.size);
+            state->dataOutType = dataType_BA;
 			break;
 		}
 		

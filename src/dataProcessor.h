@@ -3,16 +3,6 @@
 
 #include "tdc-gp22.h"
 
-#define PUT_STATUS  0
-
-typedef struct {
-    DWORD           r1, r2, r3, r4;    // raw data results
-    FLOAT           val1;
-    FLOAT           val2;
-    WORD            status;
-    gp22Status      status_parsed;
-} thermoPoint;
-
 typedef struct {
     DWORD           raw0, raw1;
     FLOAT           time0, time1; 
@@ -24,7 +14,6 @@ typedef struct {
 
 #pragma pack(push,1)
 typedef struct {
-    thermoPoint     temp;
     tofPoint        tof;
     FLOAT           tofAvg;
     FLOAT           tempAvg [2];
@@ -35,12 +24,19 @@ enum {
   dataProcessorData_SZE = sizeof (dataProcessorData),  
 };
 
+/// data processor initialzation proc
+///
 BOOL DpInit (void);
-
-void DpProcess (void);
 
 dataProcessorData DpGetCurDataPoint (void);
 
+/// data processor start 
+///
+void DpStart (void);
+
+/// data processor stop
+///
+void DpStop (void);
 
 #endif //__DATA_PROCESSOR_H__
 

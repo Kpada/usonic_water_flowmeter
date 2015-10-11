@@ -1,6 +1,4 @@
 #include "stdAfx.h"
-#include "tdc-gp22.h"
-
 
 // application state container
 applicationState 	appState;
@@ -35,76 +33,25 @@ static void showValue (void)
 {
     char str [10];
     
-    if( appIsFlag( flagShowTemp ) ) {
-        sprintf(str, "%.0f %.0f", appDataFull.tempAvg[0], appDataFull.tempAvg[1]);
+    if( appIsFlag( flagShowTof ) ) {
+        // clean
         BoardLcdClear();
-        BoardLcdPutStr((BYTE*)str);
-        BoardLcdUpdate();       
-    }
-    
-    else if( appIsFlag( flagShowTof ) ) {
-        
-        BoardLcdClear();
-        
+        // format a string
         if( appDataFull.tof.tmoError ) {
             BYTE errStr[] = "-----";
             BoardLcdPutStr((BYTE*)errStr);    
         }
         else {
-            sprintf(str, "%.3f", appDataFull.tofAvg);       
+            if( appDataFull.tofAvg >= 0.f )
+                sprintf(str, " %.3f", appDataFull.tofAvg); 
+            else
+                sprintf(str, "%.3f", appDataFull.tofAvg); 
             BoardLcdPutStr((BYTE*)str);
         }
-        
+        // and show it
         BoardLcdUpdate();      
     }
 }
-/*
-static void handleButton (void)
-{
-        // get button
-        boardBtn btnPrsd = BoardButtonGet();
-        if( btnPrsd == btn1 ) {
-            appSetFlag( flagShowTemp );
-            appClearFlag( flagShowTof ); 
-        }
-        else if( btnPrsd == btn3 ) {
-            appSetFlag( flagShowTof );
-            appClearFlag( flagShowTemp ); 
-        }
-            
-    
-}
-
-//#define PUT_DATA_TO_CHNL
-
-struct {
-    union {
-        BYTE buff[25];
-        struct {
-            BYTE  startByte;
-            FLOAT tof0, tof1, tofDiff;
-            FLOAT res0, res1;
-            BOOL  tofTmo;
-        } data;       
-    } chnl;
-} chnlData;
-
-
-static void putDataPointToChnl (void)
-{
-#ifdef  PUT_DATA_TO_CHNL
-    chnlData.chnl.data.startByte = 0x77;
-    chnlData.chnl.data.res0 = appDataFull.temp.val1;
-    chnlData.chnl.data.res1 = appDataFull.temp.val2;
-    chnlData.chnl.data.tof0 = appDataFull.tof.time0;
-    chnlData.chnl.data.tof1 = appDataFull.tof.time1;
-    chnlData.chnl.data.tofDiff = appDataFull.tof.timeDiff;
-    chnlData.chnl.data.tofTmo = appDataFull.tof.tmoError ? TRUE : FALSE;
-    uartPutBytes( (BYTE*)&chnlData.chnl.buff[0], sizeof( chnlData ) );
-#endif
-}
-*/
-
 
 int main (void)
 {
@@ -116,29 +63,33 @@ int main (void)
     appDataInit();
     // led
     BoardLedInit();
-    // btns
-    BoardButtonsInit();  
     //lcd
-    BoardLcdInit();  
+    BoardLcdInit(); 
+    BoardLcdPutStr("012345678");
+    BoardLcdUpdate();    
     // data processor
     DpInit();
     // uart
     uartInit();
     
     appSetFlag( flagShowTof );
+      
+    Sleep(250);
     
-	
+    DpStart();
+    
     while( 1 ) {
+        
+       
      //   clockCorrFactor = Gp22GetClkCorrectionFactor() * 8000000UL * 1000UL;
-		
-        // get data
-        DpProcess();
+		/*
         appDataFull = DpGetCurDataPoint();
 		appData.r1 = appDataFull.tempAvg[0];
 		appData.r2 = appDataFull.tempAvg[1];
 		appData.tof1 = appDataFull.tof.time0;
 		appData.tof1 = appDataFull.tof.time1;
-		
+        */
+		showValue();
 		protocolExecute();
     }
 }

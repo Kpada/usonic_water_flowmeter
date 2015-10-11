@@ -6,6 +6,7 @@
 
 volatile static dataProcessorData dpData;
 
+
 /****** Data timer ******/
 
 // timer macro
@@ -29,8 +30,6 @@ static void DpDataTimeInit (void)
     
 	NVIC_SetPriority(TIM2_IRQn, 7); 
 	NVIC_EnableIRQ(TIM2_IRQn);
-    
-    TIMER_ENABLE;
 }
 //---------------------------------------------------------------------------
 
@@ -38,25 +37,25 @@ static void DpDataTimeInit (void)
 ///
 static void DpGetTemerature (void)
 {   
-    thermoPoint point;
+    DWORD   r1, r2, r3, r4;   // raw data
+    FLOAT   val1;   
+    FLOAT   val2;
+    WORD    status;
     
-    if( !gp22GetTemp (&point.status, &point.r1, &point.r2, &point.r3, &point.r4) ) {
-        appSetError(errTdcTmoThermo);
-        point.val1 = 0.f;
-        point.val2 = 0.f;  
+    if( !gp22GetTemp (&status, &r1, &r2, &r3, &r4) ) {
+        // in case error - set error flag
+        appSetError (errTdcTmoThermo);
+        val1 = 0.f;
+        val2 = 0.f;  
     }
     else {
-        DWORD r34 = ( point.r3 + point.r4 ) / 2;
-        point.val1 = (FLOAT)point.r1 * 1000.f / (FLOAT)r34; 
-        point.val2 = (FLOAT)point.r2 * 1000.f / (FLOAT)r34; 
+        DWORD r34 = ( r3 + r4 ) / 2;
+        val1 = (FLOAT)r1 * 1000.f / (FLOAT)r34; 
+        val2 = (FLOAT)r2 * 1000.f / (FLOAT)r34; 
     }
-
-    point.status_parsed =  Gp22ParseStatus (point.status);   
-
-    dpData.temp = point;
     
-    dpData.tempAvg[0] = point.val1;
-    dpData.tempAvg[1] = point.val2;
+    dpData.tempAvg[0] = val1;
+    dpData.tempAvg[1] = val2;
 }
 //---------------------------------------------------------------------------
 
@@ -112,7 +111,7 @@ static void DpGetTof (void)
 }
 //---------------------------------------------------------------------------
 
-/// dp initialzation proc
+/// data processor initialzation proc
 ///
 BOOL DpInit (void)
 {
@@ -137,13 +136,22 @@ BOOL DpInit (void)
 }
 //---------------------------------------------------------------------------
 
-/// process
+/// data processor start 
 ///
-void DpProcess (void)
+void DpStart (void)
 {
-     
+    TIMER_ENABLE;
 }
 //---------------------------------------------------------------------------
+
+/// data processor stop
+///
+void DpStop (void)
+{
+    TIMER_DISABLE;
+}
+//---------------------------------------------------------------------------
+
 
 /// dp get a copy of data struct
 ///
