@@ -37,7 +37,7 @@ static void showValue (void)
         // clean
         BoardLcdClear();
         // format a string
-        if( appDataFull.tof.tmoError ) {
+        /*if( appDataFull.tof.tmoError ) {
             BYTE errStr[] = "-----";
             BoardLcdPutStr((BYTE*)errStr);    
         }
@@ -47,11 +47,18 @@ static void showValue (void)
             else
                 sprintf(str, "%.3f", appDataFull.tofAvg); 
             BoardLcdPutStr((BYTE*)str);
-        }
+        }*/
+        if( appDataFull.tofAvg >= 0.f )
+            sprintf(str, " %.3f", appDataFull.tofAvg); 
+        else
+            sprintf(str, "%.3f", appDataFull.tofAvg); 
+        BoardLcdPutStr((BYTE*)str);
         // and show it
         BoardLcdUpdate();      
     }
 }
+
+extern BYTEARRAY rpcGetData (void);
 
 int main (void)
 {
@@ -78,19 +85,24 @@ int main (void)
     
     DpStart();
     
+   
+    
     while( 1 ) {
-        
-       
+            
      //   clockCorrFactor = Gp22GetClkCorrectionFactor() * 8000000UL * 1000UL;
-		/*
+        
+        // get data
         appDataFull = DpGetCurDataPoint();
-		appData.r1 = appDataFull.tempAvg[0];
-		appData.r2 = appDataFull.tempAvg[1];
-		appData.tof1 = appDataFull.tof.time0;
-		appData.tof1 = appDataFull.tof.time1;
-        */
+        appData.r1 = appDataFull.resistanse[0];
+		appData.r2 = appDataFull.resistanse[1];
+		appData.tof1 = appDataFull.tof[0];
+		appData.tof2 = appDataFull.tof[1];
+        // show
 		showValue();
+        // protocol
 		protocolExecute();
+        
+      //  rpcGetData();
     }
 }
 

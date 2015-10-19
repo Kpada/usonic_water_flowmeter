@@ -50,7 +50,7 @@
           <OutputName>waterSpeed</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
-          <CreateHexFile>0</CreateHexFile>
+          <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\Listings\</ListingPath>
@@ -410,13 +410,48 @@
       </TargetOption>
       <Groups>
         <Group>
-          <GroupName>startup</GroupName>
+          <GroupName>config</GroupName>
           <Files>
             <File>
-              <FileName>uart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\uart.c</FilePath>
+              <FileName>dataProcessorConfig.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\config\dataProcessorConfig.h</FilePath>
             </File>
+            <File>
+              <FileName>ringbuffConfig.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\config\ringbuffConfig.h</FilePath>
+            </File>
+            <File>
+              <FileName>tdc-gp22Config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\config\tdc-gp22Config.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>header</GroupName>
+          <Files>
+            <File>
+              <FileName>stdAfx.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\stdAfx.h</FilePath>
+            </File>
+            <File>
+              <FileName>typedef.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\typedef.h</FilePath>
+            </File>
+            <File>
+              <FileName>data.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\data.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>startup</GroupName>
+          <Files>
             <File>
               <FileName>startup_stm32l1xx_md.s</FileName>
               <FileType>2</FileType>
@@ -433,6 +468,21 @@
           <GroupName>application</GroupName>
           <Files>
             <File>
+              <FileName>uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>delay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\delay.c</FilePath>
+            </File>
+            <File>
+              <FileName>ringbuff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\ringbuff.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\main.c</FilePath>
@@ -441,16 +491,6 @@
               <FileName>spi.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\spi.c</FilePath>
-            </File>
-            <File>
-              <FileName>protocol.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\protocol.c</FilePath>
-            </File>
-            <File>
-              <FileName>protocolHandlers.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\src\protocolHandlers.c</FilePath>
             </File>
             <File>
               <FileName>tdc-gp22.c</FileName>
@@ -481,36 +521,81 @@
               <FileName>boardButtons.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\demoBoard\boardButtons.c</FilePath>
+              <FileOption>
+                <CommonProperty>
+                  <UseCPPCompiler>2</UseCPPCompiler>
+                  <RVCTCodeConst>0</RVCTCodeConst>
+                  <RVCTZI>0</RVCTZI>
+                  <RVCTOtherData>0</RVCTOtherData>
+                  <ModuleSelection>0</ModuleSelection>
+                  <IncludeInBuild>0</IncludeInBuild>
+                  <AlwaysBuild>0</AlwaysBuild>
+                  <GenerateAssemblyFile>0</GenerateAssemblyFile>
+                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
+                  <PublicsOnly>2</PublicsOnly>
+                  <StopOnExitCode>11</StopOnExitCode>
+                  <CustomArgument></CustomArgument>
+                  <IncludeLibraryModules></IncludeLibraryModules>
+                  <ComprImg>1</ComprImg>
+                </CommonProperty>
+                <FileArmAds>
+                  <Cads>
+                    <interw>2</interw>
+                    <Optim>0</Optim>
+                    <oTime>1</oTime>
+                    <SplitLS>2</SplitLS>
+                    <OneElfS>2</OneElfS>
+                    <Strict>2</Strict>
+                    <EnumInt>2</EnumInt>
+                    <PlainCh>2</PlainCh>
+                    <Ropi>2</Ropi>
+                    <Rwpi>2</Rwpi>
+                    <wLevel>2</wLevel>
+                    <uThumb>2</uThumb>
+                    <uSurpInc>2</uSurpInc>
+                    <uC99>2</uC99>
+                    <useXO>1</useXO>
+                    <v6Lang>0</v6Lang>
+                    <v6LangP>0</v6LangP>
+                    <VariousControls>
+                      <MiscControls></MiscControls>
+                      <Define></Define>
+                      <Undefine></Undefine>
+                      <IncludePath></IncludePath>
+                    </VariousControls>
+                  </Cads>
+                </FileArmAds>
+              </FileOption>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>header</GroupName>
+          <GroupName>rpc</GroupName>
           <Files>
             <File>
-              <FileName>stdAfx.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\src\stdAfx.h</FilePath>
-            </File>
-            <File>
-              <FileName>typedef.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\src\typedef.h</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>common</GroupName>
-          <Files>
-            <File>
-              <FileName>ringbuff.c</FileName>
+              <FileName>protocol.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\ringbuff.c</FilePath>
+              <FilePath>.\src\protocol.c</FilePath>
             </File>
             <File>
-              <FileName>delay.c</FileName>
+              <FileName>rpc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\delay.c</FilePath>
+              <FilePath>.\src\rpc.c</FilePath>
+            </File>
+            <File>
+              <FileName>rpcHandlers.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\rpcHandlers.c</FilePath>
+            </File>
+            <File>
+              <FileName>crc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\crc.c</FilePath>
+            </File>
+            <File>
+              <FileName>rpcMap.cc</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\rpcMap.cc</FilePath>
             </File>
           </Files>
         </Group>

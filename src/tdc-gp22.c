@@ -144,11 +144,6 @@ static BOOL Gp22CheckConnection (void)
 
 BOOL gp22Irq = FALSE;
 
-
-#include "math.h"
-
-
-
 FLOAT tofRawToValue (DWORD raw)
 {
     QWORD tmp = (QWORD)raw * (QWORD)tdcMainDiv * (QWORD)1000000;
@@ -161,8 +156,8 @@ static BOOL Gp22_WFI (void)
 {
     //QWORD wait = GetCurrentTicks();
     while( GPIOB->IDR & (0x01 << 9) ) {
-       // if( GetTimeSince(wait) > 50 )
-        //        return FALSE;
+      //  if( GetTimeSince(wait) > 150 )
+     //           return FALSE;
     } 
 	
 

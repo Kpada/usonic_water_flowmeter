@@ -1,5 +1,6 @@
 #include "stdAfx.h"
 #include "dataProcessor.h"
+#include "tdc-gp22.h"
 
 // config
 #include "config/dataProcessorConfig.h"
@@ -54,60 +55,86 @@ static void DpGetTemerature (void)
         val2 = (FLOAT)r2 * 1000.f / (FLOAT)r34; 
     }
     
-    dpData.tempAvg[0] = val1;
-    dpData.tempAvg[1] = val2;
+    dpData.resistanse[0] = val1;
+    dpData.resistanse[1] = val2;
 }
 //---------------------------------------------------------------------------
 
 struct {
     // rb buff
     FLOAT	    tofQueue [DP_TOF_BUFF_SIZE]; 
-    RingBuff	tofBuff;
     // accumulator - sum of a elements inside the rb
     FLOAT       accumulator;
     // num of the elements inside accumulator
     WORD        valNum;
-
+    // buff pointer
+    WORD        buffPtr;
 } tofDataBuff;
 
 
+static void dpInitTofBuff (void)
+{
+    tofDataBuff.accumulator = 0.f;
+    tofDataBuff.buffPtr = 0;
+    tofDataBuff.valNum = 0;
+}
+
+static FLOAT dpTofBuffAddValGetAveraged (FLOAT tofValNew)
+{ 
+    // if buffer is not full 
+    if( tofDataBuff.valNum < DP_TOF_BUFF_SIZE ) {
+        // add
+        tofDataBuff.tofQueue[tofDataBuff.buffPtr] = tofValNew;
+        //
+        tofDataBuff.valNum++;
+        tofDataBuff.accumulator += tofValNew;
+    }
+    // otherwise we should pop the oldest element
+    else {
+        tofDataBuff.accumulator -= tofDataBuff.tofQueue[tofDataBuff.buffPtr];
+        tofDataBuff.tofQueue[tofDataBuff.buffPtr] = tofValNew;
+        tofDataBuff.accumulator += tofValNew;
+    }    
+    
+    // update pointer value
+    tofDataBuff.buffPtr = tofDataBuff.buffPtr == DP_TOF_BUFF_SIZE - 1 ? 0 : tofDataBuff.buffPtr + 1;
+    
+    return tofDataBuff.accumulator / tofDataBuff.valNum;
+}
+/*
+typedef struct {
+    DWORD           raw0, raw1;
+    FLOAT           time0, time1; 
+    FLOAT           timeDiff;
+    WORD            status0, status1;
+    gp22Status      status_parsed0, status_parsed1;
+    BOOL            tmoError;
+} tofPoint;
+*/
 /// dp get tof proc
 ///
 static void DpGetTof (void)
 {  
-    FLOAT curValue;
-    BOOL timeout = FALSE;
-    tofPoint point;
-   
+    DWORD raw0, raw1;
+    FLOAT time0, time1, time0_1;
+    WORD  status0, status1;
+    BOOL  isTmoError;
+    
 // get a tof value
-    Gp22Tof(&point.time0, &point.time1, &point.status0, &point.status1, &timeout, &point.raw0, &point.raw1);  
-    // parse a status
-    point.status_parsed0 =  Gp22ParseStatus (point.status0);
-    point.status_parsed1 =  Gp22ParseStatus (point.status1);    
-    point.timeDiff = point.time0 - point.time1;
-    point.tmoError = timeout;   
-    dpData.tof = point;
-   
-    curValue = point.timeDiff;
-    
-// average
-    // if buffer is not full 
-    if( !rbIsFullFromIsr(&tofDataBuff.tofBuff) ) {
-        rbPushFromIsrF(&tofDataBuff.tofBuff, curValue);
-        tofDataBuff.valNum++;
-        tofDataBuff.accumulator += curValue;
+    Gp22Tof(&time0, &time1, &status0, &status1, &isTmoError, &raw0, &raw1);  
+    if( isTmoError ) {
+        appSetError(errTdcTmoTof);
+        time0 = 0.f;
+        time1 = 0.f;
+        time0_1 = 0.f;
     }
-    // otherwise we should pop the oldest element
     else {
-        FLOAT oldestBVal;
-        rbPopFromIsrF(&tofDataBuff.tofBuff, &oldestBVal);
-        tofDataBuff.accumulator -= oldestBVal;
-        rbPushFromIsrF(&tofDataBuff.tofBuff, curValue);
-        tofDataBuff.accumulator += curValue;
+        time0_1 = time0 - time1;
     }
-    
-    // average and return
-    dpData.tofAvg = tofDataBuff.accumulator / tofDataBuff.valNum;
+   
+    dpData.tof [0] = time0;
+    dpData.tof [1] = time1;
+    dpData.tofAvg = dpTofBuffAddValGetAveraged (time0_1);
 }
 //---------------------------------------------------------------------------
 
@@ -128,9 +155,7 @@ BOOL DpInit (void)
     DpDataTimeInit();
     
     // ring buffer
-    rbInit(&tofDataBuff.tofBuff, (void*)tofDataBuff.tofQueue, DP_TOF_BUFF_SIZE);
-    tofDataBuff.accumulator = 0;
-    tofDataBuff.valNum = 0;
+    dpInitTofBuff();
 
     return TRUE;
 }

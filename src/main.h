@@ -14,7 +14,6 @@ typedef struct {
     FLOAT tofDiffAvg;
 } applicationData;
 
-
 enum tag_appErrors{
     // tdc errors
     errOk                   = 0x00,

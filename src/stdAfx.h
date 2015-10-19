@@ -18,6 +18,12 @@
 #include "stm32l1xx_conf.h"
 
 
+// default
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>  
+#include <math.h>
+
 #include "spi.h"
 #include "uart.h"
 
@@ -34,10 +40,7 @@
 #include "demoBoard/boardLeds.h"
 #include "demoBoard/boardLcd.h"
 
-// default
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>    
+
 
 #include "main.h"
 

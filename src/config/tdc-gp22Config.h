@@ -25,7 +25,7 @@ enum {
     
     
     // tof
-    tdcDelayBeforeStop1Nsec = 80000,
+    tdcDelayBeforeStop1Nsec = 40000,
     tdcEnFirstWave      = 1,    // 1 - en, 0 - dis
     tdcAutocalcMode2En  = 1,    // 1 - en, 0 - dis
     tdcDelrel1          = 3,    // 3 .. 63
