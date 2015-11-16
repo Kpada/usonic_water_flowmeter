@@ -32,21 +32,25 @@ void DelayInit (void)
     SYS_TICK_SET (value);
     SysTick->CTRL = 0x00000007; // cpu clock, enable, interrupt enable   
 }
+//---------------------------------------------------------------------------
 
 void SysTick_Handler (void)
 {
     delayTicks++;
 }
+//---------------------------------------------------------------------------
 
 QWORD GetCurrentTicks (void)
 {
     return delayTicks;
 }
+//---------------------------------------------------------------------------
 
 DATETIME GetTimeSince (QWORD prevTicks)
 {
     return (delayTicks - prevTicks) * TIMER_uSec_PER_TICK / 1000; // 1000 is usec to msec coeff
 }
+//---------------------------------------------------------------------------
 
 void DelayUSec (DWORD usec)
 {	
@@ -59,15 +63,18 @@ void DelayUSec (DWORD usec)
 	while( delayTicks - startTicksVal <= usec )
 		PowerCtlEnterIdle();
 }
+//---------------------------------------------------------------------------
 
 
 void DelayMSec (DWORD msec)
 {
     DelayUSec(msec * 1000);
 }
+//---------------------------------------------------------------------------
 
 void DelaySec (DWORD sec)
 {
     DelayMSec(sec * 1000);
 }
+//---------------------------------------------------------------------------
 

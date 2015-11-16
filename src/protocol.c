@@ -102,6 +102,7 @@ static BOOL findAndCheckTheHeader (void)
     
     return FALSE;
 }
+//---------------------------------------------------------------------------
 
 
 /// get a data buff
@@ -130,6 +131,7 @@ static BOOL additionalDataGet (void)
     
     return FALSE;
 }
+//---------------------------------------------------------------------------
 
 
 BOOL putResponse (void) 
@@ -153,12 +155,14 @@ BOOL putResponse (void)
     
     return put == totalBufferLen;
 }
+//---------------------------------------------------------------------------
 
 static WORD getRpcId (void)
 {
 	// the first 2 bytes 
 	return frame.parsedFrame.data[0] | frame.parsedFrame.data[1] << 8;
 }
+//---------------------------------------------------------------------------
 
 static BYTEARRAY getRpcInBuff (void)
 {
@@ -167,6 +171,7 @@ static BYTEARRAY getRpcInBuff (void)
 	ba.data = frame.parsedFrame.data + 2;
 	return ba;
 }
+//---------------------------------------------------------------------------
 
 
 static void prepareTheDataToBeSent (rpcState* state)
@@ -198,6 +203,7 @@ static void prepareTheDataToBeSent (rpcState* state)
         frame.totalDataLen++;
     }
 }
+//---------------------------------------------------------------------------
 
 void protocolExecute (void)
 {
@@ -220,4 +226,5 @@ void protocolExecute (void)
             }
     }        
 }
+//---------------------------------------------------------------------------
 

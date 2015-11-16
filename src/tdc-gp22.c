@@ -71,6 +71,7 @@ static DWORD calcOffsetValMv (INT8 mv)
     
     return res;
 }
+//---------------------------------------------------------------------------
 
 enum {
     // cmd write to register
@@ -110,39 +111,50 @@ __inline static void Gp22SoftReset (void)
     
     DelayMSec(1);
 }
+//---------------------------------------------------------------------------
 
 
 __inline static QWORD Gp22GetId (void)
 {
     return SpiGetQword(cmdReadId);
 }
+//---------------------------------------------------------------------------
 
 
 #define PUT_TO_REG( regNum, cmd )       SpiPutDword( cmdWrReg ## regNum, cmd )
 #define GET_FROM_REG( regNum )          SpiGetDword( cmdRdReg ## regNum )
 
-QWORD id;
+
 static BOOL Gp22CheckConnection (void)
 { 
-    // get id
-    id = Gp22GetId();
+    QWORD id = 0xFFFFFFFFFFFFFFFF;
+    const BYTE tdcCheckValue = 0x77; // any u8 value
+    BYTE tries = 5;
+    BYTE idLastByte = 0xFF;
     
-    // if last byte != 0x00
-    if( id & 0xFF ) {
-        // clear it
-        PUT_TO_REG(6, 0x00);     
+    // try to reset the last byte
+    while( --tries && idLastByte ) {
+        // get id
+        id = Gp22GetId();   
+        // if last byte != 0x00 - clear it
+        idLastByte = id;
+        if( idLastByte )             
+            PUT_TO_REG(6, 0x00);                  
     }
-    
-    // set the last byte = 0x77
-    PUT_TO_REG(6, 0x77);  
-    
-    // get id againt
-    id = Gp22GetId();
-    
-    return ( id & 0xFF ) == 0x77UL;   
-}
 
-BOOL gp22Irq = FALSE;
+    if( 0x00 == idLastByte ) {
+         // update the last byte value
+        PUT_TO_REG(6, tdcCheckValue);     
+        // and get it againt
+        id = Gp22GetId(); 
+        idLastByte = id;        
+        // and check
+        return idLastByte == tdcCheckValue;   
+    }
+ 
+    return FALSE;
+}
+//---------------------------------------------------------------------------
 
 FLOAT tofRawToValue (DWORD raw)
 {
@@ -151,18 +163,17 @@ FLOAT tofRawToValue (DWORD raw)
     FLOAT result = ( tmpF ) / tdcQuartzFreqKHz / 65536.f;
     return result;
 }
+//---------------------------------------------------------------------------
 
 static BOOL Gp22_WFI (void)
 {
-    //QWORD wait = GetCurrentTicks();
-    while( GPIOB->IDR & (0x01 << 9) ) {
-      //  if( GetTimeSince(wait) > 150 )
-     //           return FALSE;
+    while( GPIOB->IDR & (0x01 << TDC_IRQ_PIN) ) {
+        
     } 
 	
-
     return TRUE;
 }
+//---------------------------------------------------------------------------
 
 
 double Gp22GetClkCorrectionFactor (void)
@@ -181,15 +192,16 @@ double Gp22GetClkCorrectionFactor (void)
     corrFactorDwordVal = GET_FROM_REG(0);
     return corFactorPart / tofRawToValue(corrFactorDwordVal);  
 }
+//---------------------------------------------------------------------------
 
 /// init
 ///
 BOOL Gp22Init (void)
 {
-    
+    // interrupt line
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
-    GPIOB->MODER &= ~( 0x03UL << (9 << 1) );    // input
-    GPIOB->PUPDR |=  ( 0x01UL << (9 << 1) );    // pull-up
+    GPIOB->MODER &= ~( 0x03UL << (TDC_IRQ_PIN << 1) );    // input
+    GPIOB->PUPDR |=  ( 0x01UL << (TDC_IRQ_PIN << 1) );    // pull-up
     
     DelayMSec(1);
 
@@ -215,11 +227,10 @@ BOOL Gp22Init (void)
     PUT_TO_REG(6, initRegsValBuff[6] );
     
     DelayMSec(200);
-    
-
-        
+         
     return TRUE;
 }
+//---------------------------------------------------------------------------
 
 BOOL Gp22Tof (float* time0, float* time1, WORD* stat0, WORD* stat1, BOOL* isTimeout, DWORD* raw0, DWORD* raw1)
 {    
@@ -254,6 +265,7 @@ BOOL Gp22Tof (float* time0, float* time1, WORD* stat0, WORD* stat1, BOOL* isTime
     
     return *isTimeout;
 }
+//---------------------------------------------------------------------------
 
 BOOL gp22GetTemp (WORD* stat, DWORD* r1, DWORD* r2, DWORD* r3, DWORD* r4)
 {    
@@ -279,6 +291,7 @@ BOOL gp22GetTemp (WORD* stat, DWORD* r1, DWORD* r2, DWORD* r3, DWORD* r4)
     *r4 = SpiGetDword(0xB3);
     return TRUE;
 }
+//---------------------------------------------------------------------------
 
 gp22Status Gp22ParseStatus (WORD stat)
 {
@@ -297,3 +310,4 @@ gp22Status Gp22ParseStatus (WORD stat)
     
     return result; 
 }
+//---------------------------------------------------------------------------

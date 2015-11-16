@@ -1,9 +1,11 @@
 #ifndef _tdc_gp22_config_h
 #define _tdc_gp22_config_h
 
+/// tdc freq
 #define TDC_QUARTZ_FREQ_KHZ         8000  // 8 MHz
 
-//#define FIRE_PULSES_FREQ_KHZ        1000  // 1 MHz
+/// irq port & pin
+#define TDC_IRQ_PIN                 (9)
 
 // settings
 enum {
@@ -22,10 +24,9 @@ enum {
     // stop
     tdcStopPulsesChnl1  = 4 ,   // 0 .. 4
     tdcStopPulsesChnl2  = 0,    // 0 .. 4 , should be 0
-    
-    
+       
     // tof
-    tdcDelayBeforeStop1Nsec = 40000,
+    tdcDelayBeforeStop1Nsec = 50000,
     tdcEnFirstWave      = 1,    // 1 - en, 0 - dis
     tdcAutocalcMode2En  = 1,    // 1 - en, 0 - dis
     tdcDelrel1          = 3,    // 3 .. 63
@@ -33,16 +34,14 @@ enum {
     tdcDelrel3          = 5,    // 5 .. 63 && tdcDelrel3 > tdcDelrel2
     tdcAluErrorVal      = 1,    // 1 - en, 0 - dis  - tmo => fill result with 0xffffffff 
     tdcTmoPreddiv       = 3,    // 0, 1, 2, 3  ( 4MHz => 64us, 256us, 1024us, 4096us )
-    tdcOffsetValMv      = 15,    // -36 .. +35 mV
+    tdcOffsetValMv      = 15,   // -36 .. +35 mV
     tdcFirstWaveEdge    = 0,    // 0 - rising, 1 - falling
     
     // irq sourse
     tdcIrqTimeout       = 1,    // 1 - en, 0 - dis
     tdcIrqEndHits       = 0,    // 1 - en, 0 - dis
     tdcIrqALU           = 1,    // 1 - en, 0 - dis
-    tdcIrqEndEeprom     = 0,    // 1 - en, 0 - dis
-    
-    
+    tdcIrqEndEeprom     = 0,    // 1 - en, 0 - dis    
 };
 
 #endif // _tdc_gp22_config_h

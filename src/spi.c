@@ -6,6 +6,8 @@
 #define NSS_HIGH        GPIOA->ODR |=    0x01 << 4
 #define NSS_LOW         GPIOA->ODR &= ~( 0x01 << 4 )
 
+/// spi initialization procedure
+///
 void SpiInit (void)
 {
     SPI_InitTypeDef spiStruct;
@@ -46,7 +48,10 @@ void SpiInit (void)
     SPI_I2S_ReceiveData(SPI1);
     DelayMSec(1);
 }
+//---------------------------------------------------------------------------
 
+/// put a byte (internal template)
+///
 static void SpiPutByte_Internal (BYTE data)
 {
     volatile BYTE byte_;
@@ -54,7 +59,10 @@ static void SpiPutByte_Internal (BYTE data)
     while( SPI1->SR & SPI_SR_BSY );
     byte_ = SPI1->DR; // dummy read
 }
+//---------------------------------------------------------------------------
 
+/// get a byte (internal template)
+///
 static BYTE SpiGetByte_Internal (void)
 {
     SPI_I2S_SendData(SPI1, 0xff);
@@ -62,14 +70,20 @@ static BYTE SpiGetByte_Internal (void)
     while( !(SPI1->SR & SPI_SR_RXNE) );
     return SPI1->DR;
 }
+//---------------------------------------------------------------------------
 
+/// put a byte (u8)
+///
 void SpiPutByte (BYTE data)
 {
     NSS_LOW;
     SpiPutByte_Internal(data);
     NSS_HIGH;
 }
+//---------------------------------------------------------------------------
 
+/// get a byte (u8)
+///
 BYTE SpiGetByte (void)
 {
     BYTE data;
@@ -78,8 +92,10 @@ BYTE SpiGetByte (void)
     NSS_HIGH;
     return data;
 }
+//---------------------------------------------------------------------------
 
-
+/// get a word (u16)
+///
 WORD SpiGetWord (BYTE addr)
 {
     WORD result = 0; 
@@ -93,7 +109,10 @@ WORD SpiGetWord (BYTE addr)
     NSS_HIGH;
     return result;
 }
+//---------------------------------------------------------------------------
 
+/// put a word (u16)
+/// 
 void SpiPutWord (BYTE addr, BYTE data)
 {
     NSS_LOW;
@@ -103,7 +122,10 @@ void SpiPutWord (BYTE addr, BYTE data)
     
     NSS_HIGH;
 }
+//---------------------------------------------------------------------------
 
+/// put a dword (u32)
+///
 void SpiPutDword (BYTE addr, DWORD data)
 {
     NSS_LOW;
@@ -116,7 +138,10 @@ void SpiPutDword (BYTE addr, DWORD data)
     
     NSS_HIGH;
 }
+//---------------------------------------------------------------------------
 
+/// get a dword (u32)
+///
 DWORD SpiGetDword (BYTE addr)
 {
     DWORD result = 0; 
@@ -132,7 +157,10 @@ DWORD SpiGetDword (BYTE addr)
     NSS_HIGH;
     return result;
 }
+//---------------------------------------------------------------------------
 
+/// get a qword (u64)
+///
 QWORD SpiGetQword (BYTE addr)
 {
     QWORD result = 0;
@@ -151,3 +179,4 @@ QWORD SpiGetQword (BYTE addr)
     NSS_HIGH;  
     return result;    
 }
+//---------------------------------------------------------------------------

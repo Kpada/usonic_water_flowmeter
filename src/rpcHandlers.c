@@ -7,6 +7,7 @@ struct {
     FLOAT tof1, tof2, r1, r2;
 } result;
 
+
 BYTEARRAY rpcGetData (void)
 {
 	BYTEARRAY ba;
@@ -25,4 +26,5 @@ BYTEARRAY rpcGetData (void)
 	
 	return ba;
 }
+//---------------------------------------------------------------------------
 

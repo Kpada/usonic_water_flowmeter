@@ -1,29 +1,39 @@
 #include "stdAfx.h"
 #include "uart.h"
 
-// ua
-
+// uart settings
 #define TX_BUFF_SIZE        256
 #define RX_BUFF_SIZE        128
 
-static __inline void uartInitPort (void);
+// some macro
+#define TXE1_INTERRUPT_EN           USART1->CR1 |=  USART_CR1_TXEIE
+#define TXE1_INTERRUPT_DIS          USART1->CR1 &= ~USART_CR1_TXEIE
+#define UART1_GET_BYTE(byte)        byte = USART1->DR
+#define UART1_PUT_BYTE(byte)        USART1->DR = byte; TXE1_INTERRUPT_EN
+
 
 static volatile BYTE        txBuff [TX_BUFF_SIZE];
 static volatile BYTE        rxBuff [RX_BUFF_SIZE];
 
-RingBuff					uartTxQueue;
-RingBuff					uartRxQueue;
-const WORD rxTimeout =      3;
+static RingBuff				uartTxQueue;
+static RingBuff				uartRxQueue;
 
-WORD statusReg;
+const WORD rxTimeout = 3;
 
-WORD uartFlags = 0;
+static WORD statusReg;
+static WORD uartFlags = 0;
+
+static __inline void uartInitPort (void);
+
+
 enum {
     uartRXOverflow  = 0x01,
     uartTxReady     = 0x02,
 
 };
 
+/// initialization procedure
+///
 void uartInit (void)
 {
     USART_InitTypeDef USART_InitStructure;
@@ -54,27 +64,22 @@ void uartInit (void)
     
     uartFlags |= uartTxReady;
 }
+//---------------------------------------------------------------------------
 
+/// put a data byte
+///
 void uartPutByte (BYTE byte)
 {
     while(!(USART1->SR & USART_SR_TC)); //Проверка завершения передачи предыдущих данных
     USART1->DR = byte; //Передача данных    
 }
+//---------------------------------------------------------------------------
 
 
-#define TXE1_INTERRUPT_EN           USART1->CR1 |=  USART_CR1_TXEIE
-#define TXE1_INTERRUPT_DIS          USART1->CR1 &= ~USART_CR1_TXEIE
-
-#define UART1_GET_BYTE(byte)        byte = USART1->DR
-#define UART1_PUT_BYTE(byte)        USART1->DR = byte; TXE1_INTERRUPT_EN
-
-
-
-
-
-void USART1_IRQHandler(void) __irq
-{
-    
+/// usart1 irq
+///
+void USART1_IRQHandler (void) __irq
+{  
     BYTE dummy = 0;
     
     statusReg = USART1->SR;
@@ -97,9 +102,11 @@ void USART1_IRQHandler(void) __irq
         }
     }
 }
+//---------------------------------------------------------------------------
 
-
-DWORD uartPutBytes(const BYTE* bytes, DWORD count)
+/// put a buffer
+///
+DWORD uartPutBytes (const BYTE* bytes, DWORD count)
 {
     const BYTE* pos = bytes;
 	const BYTE* end = bytes + count;
@@ -130,7 +137,10 @@ DWORD uartPutBytes(const BYTE* bytes, DWORD count)
     }
 
 }
+//---------------------------------------------------------------------------
 
+/// get a buffer
+///
 DWORD uartGetBytes(BYTE* pBytes, DWORD count, DWORD timeout)
 {
 	DWORD dwReceived = 0;
@@ -151,13 +161,18 @@ DWORD uartGetBytes(BYTE* pBytes, DWORD count, DWORD timeout)
     
 	return dwReceived;
 }
+//---------------------------------------------------------------------------
 
-
+/// estimation
+///
 DWORD uartEstimateGet (DWORD byteCnt)
 {
     return byteCnt * rxTimeout;
 }
+//---------------------------------------------------------------------------
 
+/// target io initialization
+///
 static __inline void uartInitPort (void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;  
@@ -181,3 +196,4 @@ static __inline void uartInitPort (void)
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1); //PD5 to TX 
     GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1); //PD6 to RX 
 }
+//---------------------------------------------------------------------------

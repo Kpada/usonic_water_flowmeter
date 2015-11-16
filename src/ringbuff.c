@@ -25,6 +25,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 	buff->mask 	= size-1UL;
 	buff->in = buff->out = buff->count = 0;
 }
+//---------------------------------------------------------------------------
 
 // is empty
 #ifdef USE_ISR_SAFE_RB
@@ -37,6 +38,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbIsEmptyFromIsr(rbHANDLE buff)
 #else
@@ -45,6 +47,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 	{
 		return (0 == buff->count);		
 	}
+//---------------------------------------------------------------------------
 
 // is full
 #ifdef USE_ISR_SAFE_RB
@@ -57,6 +60,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbIsFullFromIsr(rbHANDLE buff)
 #else
@@ -65,6 +69,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 {
 	return buff->mask+1 == buff->count;
 }
+//---------------------------------------------------------------------------
 
 // elements count
 #ifdef USE_ISR_SAFE_RB
@@ -77,6 +82,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 
 		return result;
 	}	
+//---------------------------------------------------------------------------
 
 	DWORD rbGetCountFromIsr(rbHANDLE buff)
 #else
@@ -85,6 +91,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 {
  	return buff->count;
 }
+//---------------------------------------------------------------------------
 
 // flush entire buffer
 #ifdef USE_ISR_SAFE_RB
@@ -94,6 +101,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 		rbFlushFromIsr(buff);
 		__enable_irq();
 	}
+//---------------------------------------------------------------------------
 
 	void rbFlushFromIsr(rbHANDLE buff)
 #else
@@ -102,6 +110,7 @@ void rbInit(rbHANDLE buff, void* data, DWORD size)
 {
 	buff->in = buff->out = buff->count = 0;
 }
+//---------------------------------------------------------------------------
 
 #define RB_IS_NOT_FULL(buff) \
 	(buff->mask+1 != buff->count)
@@ -122,6 +131,7 @@ BOOL rbPushTimeoutB(rbHANDLE buff, BYTE b, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 // append byte to the end of the buffer, return (false) if fail, (true) on success
 #ifdef USE_ISR_SAFE_RB
@@ -134,6 +144,7 @@ BOOL rbPushTimeoutB(rbHANDLE buff, BYTE b, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPushFromIsrB(rbHANDLE buff, BYTE b)
 #else
@@ -149,6 +160,7 @@ BOOL rbPushTimeoutB(rbHANDLE buff, BYTE b, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // pop byte from the buffer with timeout in ms
 BOOL rbPopTimeoutB(rbHANDLE buff, BYTE* b, DWORD timeout)
@@ -163,6 +175,7 @@ BOOL rbPopTimeoutB(rbHANDLE buff, BYTE* b, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 // pop byte from front of the buffer
 #ifdef USE_ISR_SAFE_RB
@@ -175,6 +188,7 @@ BOOL rbPopTimeoutB(rbHANDLE buff, BYTE* b, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPopFromIsrB(rbHANDLE buff, BYTE* b)
 #else
@@ -193,6 +207,7 @@ BOOL rbPopTimeoutB(rbHANDLE buff, BYTE* b, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 #endif // USE_BYTE_RB
 
@@ -211,6 +226,7 @@ BOOL rbPopTimeoutB(rbHANDLE buff, BYTE* b, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPushFromIsrW(rbHANDLE buff, WORD w)
 #else	// USE_ISR_SAFE_RB
@@ -226,6 +242,7 @@ BOOL rbPopTimeoutB(rbHANDLE buff, BYTE* b, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // append word to buffer waiting timeout for buffer space to become available
 BOOL rbPushTimeoutW(rbHANDLE buff, WORD w, DWORD timeout)
@@ -239,6 +256,7 @@ BOOL rbPushTimeoutW(rbHANDLE buff, WORD w, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 // pop word from front of the buffer
 #ifdef USE_ISR_SAFE_RB
@@ -251,6 +269,7 @@ BOOL rbPushTimeoutW(rbHANDLE buff, WORD w, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPopFromIsrW(rbHANDLE buff, WORD* w)
 #else
@@ -269,6 +288,7 @@ BOOL rbPushTimeoutW(rbHANDLE buff, WORD w, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // pop word from the buffer with timeout in ms
 BOOL rbPopTimeoutW(rbHANDLE buff, WORD* w, DWORD timeout)
@@ -283,6 +303,7 @@ BOOL rbPopTimeoutW(rbHANDLE buff, WORD* w, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 #endif // USE_WORD_RB
 
@@ -300,6 +321,7 @@ BOOL rbPopTimeoutW(rbHANDLE buff, WORD* w, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPushFromIsrDW(rbHANDLE buff, DWORD dw)
 #else	// USE_ISR_SAFE_RB
@@ -315,6 +337,7 @@ BOOL rbPopTimeoutW(rbHANDLE buff, WORD* w, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // append dword to buffer waiting timeout for buffer space to become available
 BOOL rbPushTimeoutDW(rbHANDLE buff, DWORD dw, DWORD timeout)
@@ -328,6 +351,7 @@ BOOL rbPushTimeoutDW(rbHANDLE buff, DWORD dw, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 // pop dword from front of the buffer
 #ifdef USE_ISR_SAFE_RB
@@ -340,6 +364,7 @@ BOOL rbPushTimeoutDW(rbHANDLE buff, DWORD dw, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPopFromIsrDW(rbHANDLE buff, DWORD* dw)
 #else
@@ -358,6 +383,7 @@ BOOL rbPushTimeoutDW(rbHANDLE buff, DWORD dw, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // pop dword from the buffer with timeout in ms
 BOOL rbPopTimeoutDW(rbHANDLE buff, DWORD* dw, DWORD timeout)
@@ -372,6 +398,7 @@ BOOL rbPopTimeoutDW(rbHANDLE buff, DWORD* dw, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 #endif // USE_DWORD_RB
 
@@ -389,6 +416,7 @@ BOOL rbPopTimeoutDW(rbHANDLE buff, DWORD* dw, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPushFromIsrF(rbHANDLE buff, FLOAT f)
 #else	// USE_ISR_SAFE_RB
@@ -404,6 +432,7 @@ BOOL rbPopTimeoutDW(rbHANDLE buff, DWORD* dw, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // append float to buffer waiting timeout for buffer space to become available
 BOOL rbPushTimeoutF(rbHANDLE buff, FLOAT f, DWORD timeout)
@@ -417,6 +446,7 @@ BOOL rbPushTimeoutF(rbHANDLE buff, FLOAT f, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 // pop float from front of the buffer
 #ifdef USE_ISR_SAFE_RB
@@ -429,6 +459,7 @@ BOOL rbPushTimeoutF(rbHANDLE buff, FLOAT f, DWORD timeout)
 
 		return result;
 	}
+//---------------------------------------------------------------------------
 
 	BOOL rbPopFromIsrF(rbHANDLE buff, FLOAT* f)
 #else
@@ -447,6 +478,7 @@ BOOL rbPushTimeoutF(rbHANDLE buff, FLOAT f, DWORD timeout)
 	else
 		return FALSE;
 }
+//---------------------------------------------------------------------------
 
 // pop float from the buffer with timeout in ms
 BOOL rbPopTimeoutF(rbHANDLE buff, FLOAT* f, DWORD timeout)
@@ -460,5 +492,6 @@ BOOL rbPopTimeoutF(rbHANDLE buff, FLOAT* f, DWORD timeout)
 
 	return result;
 }
+//---------------------------------------------------------------------------
 
 #endif // USE_FLOAT_RB
