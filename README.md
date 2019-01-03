@@ -2,7 +2,7 @@
 
 ## Brief
 
-This is a battery powered water speed meter project I did freelancing in 2015.
+This is a battery powered waterflow meter project I did freelancing in 2015.
 
 The measurement results are displayed on the LCD and are also sent to the PC. 
 
